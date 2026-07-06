@@ -1,22 +1,35 @@
 # SPDX-FileCopyrightText: © 2024 Tiny Tapeout
 # SPDX-License-Identifier: Apache-2.0
 
-import os
+"""Example: verifying a VGA design with cocotb-vga (lib/cocotb-vga).
+
+The design under test (src/project.v) renders the cocotb-vga reference
+pattern - 8 color bars shifting one position per frame - on the TinyVGA
+Pmod pinout, so this test can check every captured pixel against a known
+image. For a real design you would keep the capture + check_timing part
+and compare against committed golden frames (frame.assert_matches) or
+model your design's expected output the same way cocotb_vga.pattern does.
+
+Captured frames, an animated GIF, and (on mismatch) diff images are
+written to test/output/.
+"""
 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
+from cocotb_vga import VGA_640x480_60, TinyVGA, VGACapture
+from cocotb_vga.pattern import detect_phase, expected_frame
+
 
 @cocotb.test()
-async def test_project(dut):
+async def test_vga_frames(dut):
     dut._log.info("Start")
 
-    # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 10, unit="us")
+    # One clock cycle = one pixel; the simulated period is irrelevant.
+    clock = Clock(dut.clk, 40, unit="ns")  # ~25 MHz pixel clock
     cocotb.start_soon(clock.start())
 
-    # Reset
     dut._log.info("Reset")
     dut.ena.value = 1
     dut.ui_in.value = 0
@@ -25,56 +38,23 @@ async def test_project(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
 
-    dut._log.info("Test project behavior")
-
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
-
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
-
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
-
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
-
-
-# Captures VGA frames from uo_out (TinyVGA Pmod pinout) into test/output/ as
-# PNGs plus an animated GIF, and checks the sync timing cycle-accurately.
-# Enable with `VGA_TEST=1 make -B` once the design drives VGA on uo_out
-# (or remove the skip once the template test above is retired).
-# A complete working example lives on the `vga-example` branch.
-@cocotb.test(skip=os.environ.get("VGA_TEST", "") != "1")
-async def test_vga_frames(dut):
-    from cocotb_vga import VGA_640x480_60, TinyVGA, VGACapture
-
-    dut._log.info("Start VGA capture test")
-
-    # One sim clock cycle = one pixel; the real period doesn't matter.
-    clock = Clock(dut.clk, 40, unit="ns")  # ~25 MHz pixel clock
-    cocotb.start_soon(clock.start())
-
-    dut.ena.value = 1
-    dut.ui_in.value = 0
-    dut.uio_in.value = 0
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
-    dut.rst_n.value = 1
-
+    # Capture two complete frames (each is 800x525 = 420k cycles).
     cap = VGACapture(dut.clk, TinyVGA(dut.uo_out), VGA_640x480_60,
-                     out_dir="output", name="tamagotthis").start()
+                     out_dir="output", name="vga_example").start()
     frames = await cap.wait_for_frames(2)
     cap.stop()
 
+    # Sync periods, pulse widths and alignment, cycle-exact.
     cap.check_timing(require_frames=2)
-    cap.save_gif(duration_ms=100)
+    cap.save_gif(duration_ms=250)
     dut._log.info("%s", cap.report())
 
-    # Once you have a known-good frame, commit it and enable golden-image
-    # regression:
-    # frames[0].assert_matches("golden_frame0.png",
-    #                          diff_path="output/golden_diff.png")
-    assert frames
+    # The DUT draws the library's reference pattern, so every pixel is
+    # known: find which phase frame 0 shows, then require each frame to
+    # match exactly and to advance the pattern by one bar per frame.
+    phase = detect_phase(frames[0].data, VGA_640x480_60)
+    assert phase is not None, \
+        "frame 0 is not the expected color-bar pattern; see test/output/"
+    for i, frame in enumerate(frames):
+        frame.assert_matches(expected_frame(VGA_640x480_60, phase + i),
+                             diff_path=f"output/vga_example_diff_{i}.png")
