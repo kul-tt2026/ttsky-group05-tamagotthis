@@ -19,6 +19,17 @@ To learn more and get started, visit https://tinytapeout.com.
 
 The GitHub action will automatically build the ASIC files using [LibreLane](https://www.zerotoasiccourse.com/terminology/librelane/).
 
+## Development notes for this project
+
+- Clone with submodules: `git clone --recursive ...` (or run
+  `git submodule update --init` after a plain clone). The
+  [cocotb-vga](https://github.com/kul-tt2026/cocotb-vga) checker used by the
+  testbench lives in `lib/cocotb-vga`.
+- Install the test dependencies from the repo root:
+  `pip install -r test/requirements.txt` (needs Python 3 and Icarus Verilog).
+- Run the testbench with `make -B` in `test/`; see
+  [test/README.md](test/README.md) for VGA frame capture / inspection.
+
 ## Enable GitHub actions to build the results page
 
 - [Enabling GitHub Pages](https://tinytapeout.com/faq/#my-github-action-is-failing-on-the-pages-part)

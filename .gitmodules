@@ -1,0 +1,4 @@
+[submodule "lib/cocotb-vga"]
+	path = lib/cocotb-vga
+	url = https://github.com/kul-tt2026/cocotb-vga.git
+	branch = main

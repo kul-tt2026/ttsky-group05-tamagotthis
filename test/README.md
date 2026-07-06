@@ -40,6 +40,27 @@ To remove all generated files (`sim_build/`, `__pycache__/`, `results.xml`, `tb.
 make clean
 ```
 
+## VGA Output Verification
+
+This project drives a VGA display through the
+[TinyVGA Pmod](https://github.com/mole99/tiny-vga) pinout on `uo_out`. The
+[cocotb-vga](../lib/cocotb-vga) library (git submodule) captures the VGA
+signals during simulation into PNG frames and an animated GIF, and checks
+the sync timing cycle-accurately.
+
+`test.py` contains a `test_vga_frames` test that writes captured frames to
+`test/output/`. It is skipped until the design actually produces VGA output;
+enable it with:
+
+```sh
+VGA_TEST=1 make -B
+```
+
+For a complete working example — a color-bar generator in `src/` verified
+pixel-exactly through this exact flow — check out the `vga-example` branch.
+The library's own tests live in its repo. If the submodule directory is
+empty, run `git submodule update --init` first.
+
 ## Viewing Waveforms
 
 With [GTKWave](https://gtkwave.sourceforge.net/):

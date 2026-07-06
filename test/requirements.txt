@@ -1,2 +1,6 @@
 pytest==8.4.2
 cocotb==2.0.1
+# VGA frame-capture checker (git submodule at lib/cocotb-vga). The path is
+# relative to where pip runs, so install from the repo root:
+#   pip install -r test/requirements.txt
+-e ./lib/cocotb-vga
