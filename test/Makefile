@@ -4,6 +4,7 @@
 # Defaults
 SIM             ?= icarus
 FST             ?= -fst # Use more efficient FST format
+SIM_ARGS        += -n   # Ctrl-C terminates vvp instead of pausing into its interactive prompt
 TOPLEVEL_LANG   ?= verilog
 SRC_DIR          = $(PWD)/../src
 PROJECT_SOURCES  = project.v
