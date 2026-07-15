@@ -15,7 +15,7 @@ module main_controller (
     input deplete_battery,                                  // Signals that the battery has to drop one level.
     input fish_caught,                                      // Signals that a fish has been caught.
     output [9:0] cat_pos_x,                                 // The x-position of the cat.
-    output [8:0] cat_pos_y,                                 // The y-position of the cat.
+    output [9:0] cat_pos_y,                                 // The y-position of the cat.
     output [3:0] lives_left,                                // The number of lives the cat has left, to be shown on the VGA.
     output [3:0] battery_left,                              // The number of battery bars the cat has left, to be shown on the VGA.
     output is_eating,                                       // Signals that the food minigame is currently active.
