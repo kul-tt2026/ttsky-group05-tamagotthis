@@ -8,7 +8,7 @@ module audio (
     input play_bang,                    // Prompts a bang sound when the cat is spawned.
     input play_default,                 // Prompts a default sound when the cat is in its default state.
     input play_sleeping,                // Prompts a sleeping sound when the cat is sleeping.
-    input play_playing,           // Prompts a playing sound when the cat is playing, e.g. every time the cat catches the ball.
+    input play_playing,                 // Prompts a playing sound when the cat is playing, e.g. every time the cat catches the ball.
     input play_dead,                    // Prompts a sound when the cat dies.
     output audio_out                    // Audio output signal that goes to the audio PMOD.
 );

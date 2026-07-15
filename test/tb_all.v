@@ -58,16 +58,16 @@ module tb_main_controller ();
   end
 
   // Wire up the inputs and outputs:
-  reg reset, clk;
+  reg rst_n, clk;
   reg left, right, up, down, A, B, X, Y;
   reg is_sleeping, fish_caught, is_playing, is_dead, is_eating, show_bang, deplete_battery;
-  reg [9:0] cat_pos_x;
-  reg [8:0] cat_pos_y;
+  reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping;
+  reg [9:0] cat_pos_x, cat_pos_y;
   reg [3:0] lives_left, battery_left;
 
   // Replace tt_um_example with your module name:
   main_controller main_controller_dut (
-      .reset(reset),
+      .rst_n(rst_n),
       .clk(clk),
       .left(left),
       .right(right),
@@ -82,7 +82,13 @@ module tb_main_controller ();
       .is_playing(is_playing),
       .is_dead(is_dead),
       .is_eating(is_eating),
+      .is_default_state(is_default_state),
       .show_bang(show_bang),
+      .play_bang(play_bang),
+      .play_default(play_default),
+      .play_dead(play_dead),
+      .play_playing(play_playing),
+      .play_sleeping(play_sleeping),
       .deplete_battery(deplete_battery),
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
@@ -103,18 +109,115 @@ module tb_timer ();
 
   // Wire up the inputs and outputs:
   reg clk;
-  reg reset;
+  reg rst_n;
   reg is_sleeping, caught_fish, is_playing;
   wire deplete_battery;
 
   // Replace tt_um_example with your module name:
   timer timer_dut (
-      .reset(reset),
+      .rst_n(rst_n),
       .clk(clk),
       .is_sleeping(is_sleeping),
       .caught_fish(caught_fish),
       .is_playing(is_playing),
       .deplete_battery(deplete_battery)
+  );
+
+endmodule
+
+module tb_audio ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_audio.fst");
+    $dumpvars(0, tb_audio);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  reg clk;
+  reg rst_n;
+  reg fish_caught, play_bang, play_default, play_sleeping, play_playing, play_dead, audio_out;
+
+  // Replace tt_um_example with your module name:
+  audio audio_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .fish_caught(fish_caught),
+      .play_bang(play_bang),
+      .play_default(play_default),
+      .play_sleeping(play_sleeping),
+      .play_playing(play_playing),
+      .play_dead(play_dead),
+      .audio_out(audio_out)
+  );
+
+endmodule
+
+module tb_vga ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_vga.fst");
+    $dumpvars(0, tb_vga);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  reg clk;
+  reg rst_n;
+  reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
+  reg is_sleeping, is_playing, is_eating, is_dead, show_bang;
+  reg hsync, vsync;
+  reg [1:0] R, G, B;
+
+  // Replace tt_um_example with your module name:
+  vga vga_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .cat_pos_x(cat_pos_x),
+      .cat_pos_y(cat_pos_y),
+      .fish_pos_x(fish_pos_x),
+      .fish_pos_y(fish_pos_y),
+      .is_sleeping(is_sleeping),
+      .is_playing(is_playing),
+      .is_eating(is_eating),
+      .is_dead(is_dead),
+      .show_bang(show_bang),
+      .hsync(hsync),
+      .vsync(vsync),
+      .R(R),
+      .G(G),
+      .B(B)
+  );
+
+endmodule
+
+module tb_minigame ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_minigame.fst");
+    $dumpvars(0, tb_minigame);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  reg clk;
+  reg rst_n;
+  reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
+  reg is_eating, fish_caught;
+
+  // Replace tt_um_example with your module name:
+  vga vga_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .cat_pos_x(cat_pos_x),
+      .cat_pos_y(cat_pos_y),
+      .fish_pos_x(fish_pos_x),
+      .fish_pos_y(fish_pos_y),
+      .fish_caught(fish_caught),
+      .is_eating(is_eating),
   );
 
 endmodule
