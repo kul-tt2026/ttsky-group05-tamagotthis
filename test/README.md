@@ -12,8 +12,14 @@ For more information, check the [Tiny Tapeout website](https://tinytapeout.com/h
 
 ### RTL Simulation
 
+To run the tests of the entire project:
 ```sh
 make
+```
+To run a single module:
+```sh
+make TOPLEVEL=tb_timer COCOTB_TEST_MODULES=timer_tests
+make TOPLEVEL=tb_main_controller COCOTB_TEST_MODULES=main_controller_tests
 ```
 
 ### Gate-Level Simulation
