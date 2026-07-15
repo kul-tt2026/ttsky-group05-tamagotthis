@@ -10,7 +10,7 @@
  *  - If a fish is caught, the cat plays or the cat sleeps, the battery increases again.
  */
 module main_controller (
-    input reset, clk,                                       // Global active-low reset and clock.
+    input rst_n, clk,                                       // Global active-low reset and clock.
     input left, right, up, down, A, B, X, Y,                // Inputs from the Controller pmod.
     input deplete_battery,                                  // Signals that the battery has to drop one level.
     input fish_caught,                                      // Signals that a fish has been caught.
@@ -19,7 +19,10 @@ module main_controller (
     output [3:0] lives_left,                                // The number of lives the cat has left, to be shown on the VGA.
     output [3:0] battery_left,                              // The number of battery bars the cat has left, to be shown on the VGA.
     output is_eating,                                       // Signals that the food minigame is currently active.
-    output show_bang, is_dead, is_sleeping, is_playing      // Signals to the VGA about extra stuff to render and to the timer to affect the battery.
+    output show_bang, is_dead, is_sleeping, is_playing,     // Signals to the VGA about extra stuff to render and to the timer to affect the battery.
+    output is_default_state,                                // Signals to the VGA that the cat is in the default state.
+    output play_bang, play_default, play_dead,              // Signals to the audio which sound needs to be played.
+    output play_playing, play_sleeping                      // Signals to the audio which sound needs to be played.
 );
 
 endmodule
