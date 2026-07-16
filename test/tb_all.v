@@ -60,7 +60,7 @@ module tb_main_controller ();
   // Wire up the inputs and outputs:
   reg rst_n, clk;
   reg left, right, up, down, A, B, X, Y;
-  reg is_sleeping, fish_caught, is_playing, is_dead, is_eating, show_bang, deplete_battery;
+  reg is_sleeping, fish_caught, is_playing, is_dead, is_eating, show_bang, deplete_battery, battery_almost_empty;
   reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping;
   reg [9:0] cat_pos_x, cat_pos_y;
   reg [3:0] lives_left, battery_left;
@@ -90,6 +90,7 @@ module tb_main_controller ();
       .play_playing(play_playing),
       .play_sleeping(play_sleeping),
       .deplete_battery(deplete_battery),
+      .battery_almost_empty(battery_almost_empty),
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
       .lives_left(lives_left),
@@ -137,7 +138,7 @@ module tb_audio ();
   // Wire up the inputs and outputs:
   reg clk;
   reg rst_n;
-  reg fish_caught, play_bang, play_default, play_sleeping, play_playing, play_dead, audio_out;
+  reg fish_caught, play_bang, play_default, play_sleeping, play_playing, play_dead, battery_almost_empty, audio_out;
 
   // Replace tt_um_example with your module name:
   audio audio_dut (
@@ -149,6 +150,7 @@ module tb_audio ();
       .play_sleeping(play_sleeping),
       .play_playing(play_playing),
       .play_dead(play_dead),
+      .battery_almost_empty(battery_almost_empty),
       .audio_out(audio_out)
   );
 
@@ -217,7 +219,7 @@ module tb_minigame ();
       .fish_pos_x(fish_pos_x),
       .fish_pos_y(fish_pos_y),
       .fish_caught(fish_caught),
-      .is_eating(is_eating),
+      .is_eating(is_eating)
   );
 
 endmodule

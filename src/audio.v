@@ -10,6 +10,7 @@ module audio (
     input play_sleeping,                // Prompts a sleeping sound when the cat is sleeping.
     input play_playing,                 // Prompts a playing sound when the cat is playing, e.g. every time the cat catches the ball.
     input play_dead,                    // Prompts a sound when the cat dies.
+    input battery_almost_empty,         // Prompts a sound when the battery is almost empty.
     output audio_out                    // Audio output signal that goes to the audio PMOD.
 );
 
