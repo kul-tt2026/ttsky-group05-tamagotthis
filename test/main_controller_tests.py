@@ -530,3 +530,89 @@ async def die_test(dut):
     assert dut.lives_left == 9
     assert dut.battery_left == 8
     assert dut.battery_almost_empty == 0
+
+
+# Tests if the battery of the cat increases if the cat eats, sleeps or plays.
+async def increase_battery_test(dut):
+    await setup_test(dut)
+
+    # Number of cycles to sleep before the battery increases.
+    SLEEP_TIME = 10
+    # Number of cycles to play before the battery increases.
+    PLAY_TIME = 10
+    # Number of fish to catch before the battery increases.
+    FISH_TO_CATCH = 3
+
+    dut._log.info("Artifically decreasing battery.")
+    for battery in range(8,3,-1):
+        dut.deplete_battery = 1
+        await ClockCycles(dut.clk, 1)
+        dut.deplete_battery = 0
+        await ClockCycles(dut.clk, 1)
+    battery = dut.battery_left
+    
+    dut._log.info("Testing battery increase from Sleeping.")
+    dut.Y.value = 1
+    await ClockCycles(dut.clk, 1)
+    dut.Y.value = 0
+    assert_state(dut, STATE_SLEEPING)
+    dut._log.info("    Entered Sleeping state successfully.")
+    await ClockCycles(dut.clk, SLEEP_TIME)
+    assert dut.battery_left = battery + 1
+    battery = dut.battery_left
+    dut._log.info("    Slept successfully, battery increased.")
+
+    dut._log.info("Testing battery increase from Playing.")
+    dut.B.value = 1
+    await ClockCycles(dut.clk, 1)
+    dut.B.value = 0
+    assert_state(dut, STATE_DEFAULT)
+    dut.X.value = 1
+    await ClockCycles(dut.clk, 1)
+    dut.X.value = 0
+    assert_state(dut, STATE_PLAYING)
+    dut._log.info("    Entered Playing state successfully.")
+    await ClockCycles(dut.clk, PLAY_TIME)
+    assert dut.battery_left = battery + 1
+    battery = dut.battery_left
+    dut._log.info("    Played successfully, battery increased.")
+
+    dut._log.info("Testing battery increase from Eating.")
+    dut.B.value = 1
+    await ClockCycles(dut.clk, 1)
+    dut.B.value = 0
+    assert_state(dut, STATE_DEFAULT)
+    dut.A.value = 1
+    await ClockCycles(dut.clk, 1)
+    dut.A.value = 0
+    assert_state(dut, STATE_EATING)
+    dut._log.info("    Entered Eating state successfully.")
+    for i in range(FISH_TO_CATCH):
+        dut.fish_caught.value = 1
+        await ClockCycles(dut.clk, 1)
+        dut.fish_caught.value = 0
+    assert dut.battery_left = battery + 1
+    dut._log.info("    Ate successfully, battery increased.")
+
+
+# Tests if the battery cannot exceed 8 levels.
+async def battery_max_test(dut):
+    await setup_test(dut)
+
+    # Number of cycles to sleep before the battery increases.
+    SLEEP_TIME = 10
+
+    dut._log.info("Entering Sleeping state.")
+    dut.Y.value = 1
+    await ClockCycles(dut.clk, 1)
+    dut.Y.value = 0
+    assert_state(dut, STATE_SLEEPING)
+    dut._log.info("    Entered Sleeping state successfully.")
+
+    dut._log.info("Sleeping for a long time.")
+    await ClockCycles(dut.clk, SLEEP_TIME * 3)
+    assert dut.battery_left == 8
+    dut._log.info("    Sleeping for a long time successul, battery levels did not exceed 8.")
+
+
+
