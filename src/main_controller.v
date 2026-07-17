@@ -106,11 +106,11 @@ module main_controller (
         next_cat_pos_x = cat_pos_x;
         next_cat_pos_y = cat_pos_y;
         next_total_fish_caught = total_fish_caught;
-        next_has_moved_left = has_moved_left;
-        next_has_moved_down = has_moved_down;
-        next_has_moved_right = has_moved_right;
-        next_has_moved_up = has_moved_up;
-        timer_in = 0;
+        next_has_moved_left = 1'bx;
+        next_has_moved_down = 1'bx;
+        next_has_moved_right = 1'bx;
+        next_has_moved_up = 1'bx;
+        timer_in = {TIMER_BITS{1'bx}};
 
         // Active low reset.
         if (~rst_n) begin
@@ -162,22 +162,30 @@ module main_controller (
                     if (left == 1) begin
                         next_has_moved_left = 1;
                         next_has_moved_right = 0;
-                        if ((timer == 0 || ~has_moved_left) && STEP_INTERVAL > 0) begin
-                            set_timer = 1;
-                            timer_in = STEP_INTERVAL;
-                            next_cat_pos_x = cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
-                        end else if (~has_moved_left && STEP_INTERVAL < 0) begin
-                            next_cat_pos_x = cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
+                        if (STEP_INTERVAL > 0) begin
+                            if ((timer == 0 || ~has_moved_left)) begin
+                                set_timer = 1;
+                                timer_in = STEP_INTERVAL;
+                                next_cat_pos_x = cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
+                            end
+                        end else begin
+                            if (~has_moved_left) begin
+                                next_cat_pos_x = cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
+                            end
                         end
-                    end else if (right == 1) begin 
+                    end else if (right == 1) begin
                         next_has_moved_left = 0;
                         next_has_moved_right = 1;
-                        if ((timer == 0 || ~has_moved_right) && STEP_INTERVAL > 0) begin
-                            set_timer = 1;
-                            timer_in = STEP_INTERVAL;
-                            next_cat_pos_x = cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
-                        end else if (~has_moved_right && STEP_INTERVAL < 0) begin
-                            next_cat_pos_x = cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
+                        if (STEP_INTERVAL > 0) begin
+                            if ((timer == 0 || ~has_moved_right)) begin
+                                set_timer = 1;
+                                timer_in = STEP_INTERVAL;
+                                next_cat_pos_x = cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
+                            end
+                        end else begin
+                            if (~has_moved_right) begin
+                                next_cat_pos_x = cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
+                            end
                         end
                     end else begin
                         next_has_moved_left = 0;
@@ -187,22 +195,31 @@ module main_controller (
                     if (down == 1) begin
                         next_has_moved_up = 0;
                         next_has_moved_down = 1;
-                        if ((timer == 0 || ~has_moved_down) && STEP_INTERVAL > 0) begin
-                            set_timer = 1;
-                            timer_in = STEP_INTERVAL;
-                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
-                        end else if (~has_moved_down && STEP_INTERVAL < 0) begin
-                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
+                        
+                        if (STEP_INTERVAL > 0) begin
+                            if ((timer == 0 || ~has_moved_down)) begin
+                                set_timer = 1;
+                                timer_in = STEP_INTERVAL;
+                                next_cat_pos_y = cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
+                            end
+                        end else begin
+                            if (~has_moved_down) begin
+                                next_cat_pos_y = cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
+                            end
                         end
                     end else if (up == 1) begin 
                         next_has_moved_up = 1;
                         next_has_moved_down = 0;
-                        if ((timer == 0 || ~has_moved_up) && STEP_INTERVAL > 0) begin
-                            set_timer = 1;
-                            timer_in = STEP_INTERVAL;
-                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
-                        end else if (~has_moved_up && STEP_INTERVAL < 0) begin
-                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
+                        if (STEP_INTERVAL > 0) begin
+                            if ((timer == 0 || ~has_moved_up)) begin
+                                set_timer = 1;
+                                timer_in = STEP_INTERVAL;
+                                next_cat_pos_y = cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
+                            end
+                        end else begin
+                            if (~has_moved_up) begin
+                                next_cat_pos_y = cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
+                            end
                         end
                     end else begin
                         next_has_moved_up = 0;
