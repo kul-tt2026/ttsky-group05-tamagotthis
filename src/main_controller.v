@@ -287,20 +287,15 @@ module main_controller (
     assign is_dead = (State == Dead);
     assign show_bang = (State == Bang);
 
-    assign play_bang = ~rst_n || (State == Dead && timer == 0);  // If you want the signal to be a quick pulse.
+    assign play_bang = (next_state == Bang && State != Bang) || ~rst_n;  // If you want the signal to be a quick pulse.
     // assign play_bang = show_bang;  // If you want the signal to stay on while in the bang state.
-    assign play_default = (State == Bang && timer == 0) 
-                        || (State == Dead && lives_left != 0 && timer == 0)
-                        || (State == Playing && B == 1)
-                        || (State == Sleeping && B == 1)
-                        || (State == Eating && B == 1)
-                        || (State == Eating && fish_caught && total_fish_caught == 1);
+    assign play_default = (next_state == Default && State != Default);
     // assign play_default = is_default_state;  // If you want the signal to stay on while in the bang state.
-    assign play_playing = State == Default && X == 1;  // If you want the signal to be a quick pulse.
+    assign play_playing = (next_state == Playing && State != Playing);  // If you want the signal to be a quick pulse.
     // assign play_playing = is_playing;  // If you want the signal to stay on while in the bang state.
-    assign play_sleeping = State == Default && Y == 1;  // If you want the signal to be a quick pulse.
+    assign play_sleeping = (next_state == Sleeping && State != Sleeping);  // If you want the signal to be a quick pulse.
     // assign play_sleeping = is_sleeping;  // If you want the signal to stay on while in the bang state.
-    assign play_dead = (State == Default || State == Sleeping || State == Playing) && battery_left == 0;  // If you want the signal to be a quick pulse.
+    assign play_dead = (next_state == Dead && State != Dead);  // If you want the signal to be a quick pulse.
     // assign play_dead = is_dead;  // If you want the signal to stay on while in the bang state.
 
 endmodule
