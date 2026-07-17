@@ -1,0 +1,56 @@
+`default_nettype none
+
+module tt_um_pwm_example (
+    input  wire [7:0] ui_in,    // Dedicated inputs
+    output wire [7:0] uo_out,   // Dedicated outputs
+    input  wire [7:0] uio_in,   // IOs: Input path
+    output wire [7:0] uio_out,  // IOs: Output path
+    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
+    input  wire       ena,      // always 1 when the design is powered, so you can ignore it
+    input  wire       clk,      // clock
+    input  wire       rst_n     // reset_n - low to reset
+);
+
+  reg [16:0] counter = 0;       // klokperiode van 40 ns dwz 25MHz
+  localparam DO = 17'd95556;    // periode van klok past zo veel keer id periode ve do
+  reg [18:0] tone = 0;          // periode van de toonhoogte
+  reg [7:0] counter_pwm = 0;
+  localparam period_pwm = 8'd255;    // pwm frequentie ong 98 kHz werd arbitriar gekozen
+
+  reg [7:0] threshold = 0;
+  localparam threshold_low = 8'd255 * 5/100;
+  localparam threshold_high = 8'd255 * 90/100;
+  reg [17:0] threshold_switch = 0;
+  reg state;
+
+  always @(posedge clk) begin
+    if (!rst_n)
+      counter <= 0;
+    else begin
+      if (counter >= DO) begin
+        counter <= 0;
+        threshold <= 0; end
+      else counter <= counter + 1;
+
+      if (counter_pwm >= period_pwm) begin
+        counter_pwm <= 0;
+        threshold <= threshold + 1; end
+      else counter_pwm <= counter_pwm + 1;
+      
+      if (counter_pwm <= threshold)
+        state <= 1;
+      else state <= 0;
+      end
+  end
+
+  assign uio_out[7] = state;
+
+  // All output pins must be assigned. If not used, assign to 0.
+  assign uo_out = 0;
+  assign uio_out[6:0] = 0;
+  assign uio_oe = 8'b10000000;
+
+  // List all unused inputs to prevent warnings
+  wire _unused = &{ena, uio_in[7:4], 1'b0};
+
+endmodule

@@ -8,8 +8,17 @@ module audio (
     output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
     input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
-    input  wire       rst_n     // reset_n - low to reset
+    input  wire       rst_n,     // reset_n - low to reset
+    input  wire [6:0] state_sound // deze zijn niet perse de states v main maar eerder states voor welk geluid er gemaakt moet worden
 );
+
+    // state_sound[0] = play_dead
+    // state_sound[1] = battery
+    // state_sound[2] = play_sleeping
+    // state_sound[3] = fish_caught
+    // state_sound[4] = play_bang
+    // state_sound[5] = play_default
+    // state_sound[6] = play_playing
 
     // de periodes van de noten die ik nodig heb
     // noten voor play_dead
@@ -18,28 +27,90 @@ module audio (
     localparam la = 18'd227273;
     localparam lamol = 18'd240778;
 
+    reg [2:0] state_wompwomp;
+
     // noten voor play_sleeping
 
 
     // instantieer play_note
+    reg startsignaal = 0;
+    reg [17:0] tune = 0;
+    reg [2:0] rythm = 0;
+    wire state;
+    wire done;
     play_note play_note (
         .clk    (clk),
         .rst_n  (rst_n),
         .startsignaal   (startsignaal),
         .tune   (tune),
         .rythm  (rythm),
-        .pwm_wave   (state)
+        .pwm_wave   (state),
+        .done   (done)
     );
-    reg startsignaal = 0;
-    reg [17:0] tune = 0;
-    reg [2:0] rythm = 0;
-    reg state;
+
+    reg [2:0] counter_startsignaal = 0;
 
     always @(posedge clk) begin
 
-        // if play_dead == 1: speel het geluid voor dood
-        
+        if (!rst_n)  begin
+            counter_startsignaal <= 0;
+            startsignaal <= 0;
+            rythm <= 0; end
+        else begin
 
+        // startsignaal moet na 7 of  klokslagen terug 0 worden
+        if (counter_startsignaal >= 7 && startsignaal) begin
+            startsignaal <= 0;
+            counter_startsignaal <= 0;  end
+        else if (startsignaal == 1)
+            counter_startsignaal <= counter_startsignaal + 1;
+
+        // geen geluid maken
+        if (state_sound == 7'd0)
+            startsignaal <= 0;
+
+        // state machine voor play_dead == 1
+        case (state_wompwomp)
+
+            3'd0: begin                         // speel si gedurende een halve seconde
+                if (state_sound[0]) begin
+                    startsignaal <= 1;
+                    tune <= si;
+                    rythm <= 3'd1;  
+                    state_wompwomp <= 3'd1; end
+            end
+        
+            3'd1: begin                         // lakruis voor een halve seconde
+                if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= lakruis;
+                    rythm <= 3'd1;
+                    state_wompwomp <= 3'd2;  end
+            end
+
+            3'd2: begin
+                if (done && !startsignaal)  begin
+                    startsignaal <= 1;
+                    tune <= la;
+                    rythm <= 3'd1;  
+                    state_wompwomp <= 3'd3; end
+            end
+
+            3'd3: begin
+                if (done && !startsignaal)   begin
+                    startsignaal <= 1;
+                    tune <= lamol;
+                    rythm <= 3'd7;
+                    state_wompwomp <= 3'd0;  end
+            end
+
+            default: state_wompwomp <= 3'd0;
+        
+        endcase
+
+        // state machine for p
+
+        end
     end
 
 
