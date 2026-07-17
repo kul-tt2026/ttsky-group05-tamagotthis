@@ -1,0 +1,2 @@
+Version,Gates Used,Area (um),Notable Changes,Comment
+V1,3742,16493.3,Initial Design,Keep in mind that this includes the gamepad pmod and some random output assignments. also has some inprecise audio timings.

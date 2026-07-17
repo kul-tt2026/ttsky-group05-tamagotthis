@@ -56,17 +56,8 @@ module main_controller (
     // General timer.
     // This timer is used for various events, and moves down. in a constant fashion.
     // Set 'set_timer' to 1 to assign the timer a certain value from 'timer_in'.
-    reg [TIMER_BITS-1:0] timer;
+    reg [TIMER_BITS-1:0] timer, timer_in;
     reg set_timer;
-    reg [TIMER_BITS-1:0] timer_in;
-
-    always @(posedge clk) begin
-        if (set_timer) begin 
-            timer <= timer_in;
-            // set_timer <= 0;
-        end
-        else timer <= timer - 1;
-    end
 
     // State machine.
     reg [2:0] State;
@@ -76,151 +67,193 @@ module main_controller (
     localparam Sleeping = 3'b011;
     localparam Playing = 3'b100;
     localparam Dead = 3'b101;
+    // Extra variables
     reg [$clog2(FISH_TO_CATCH+1)-1:0] total_fish_caught;
-
     reg has_moved_left, has_moved_right, has_moved_up, has_moved_down;
-    
-    always @(posedge clk) begin
 
+    reg next_has_moved_left, next_has_moved_right, next_has_moved_up, next_has_moved_down;
+    reg [2:0] next_state;
+    reg [3:0] next_lives, next_battery;
+    reg [9:0] next_cat_pos_x, next_cat_pos_y;
+    reg [$clog2(FISH_TO_CATCH+1)-1:0] next_total_fish_caught;
+
+    always @(posedge clk) begin
+        if (set_timer) begin 
+            timer <= timer_in;
+        end
+        else begin 
+            timer <= timer - 1;
+        end
+
+        State <= next_state;
+        lives_left <= next_lives;
+        battery_left <= next_battery;
+        cat_pos_x <= next_cat_pos_x;
+        cat_pos_y <= next_cat_pos_y;
+        total_fish_caught <= next_total_fish_caught;
+        has_moved_left <= next_has_moved_left;
+        has_moved_up <= next_has_moved_up;
+        has_moved_right <= next_has_moved_right;
+        has_moved_down <= next_has_moved_down;
+    end
+    
+    always @(*) begin
+        // Default values:
+        set_timer = 0;
+        next_state = State;
+        next_lives = lives_left;
+        next_battery = battery_left;
+        next_cat_pos_x = cat_pos_x;
+        next_cat_pos_y = cat_pos_y;
+        next_total_fish_caught = total_fish_caught;
+        next_has_moved_left = has_moved_left;
+        next_has_moved_down = has_moved_down;
+        next_has_moved_right = has_moved_right;
+        next_has_moved_up = has_moved_up;
+        timer_in = 0;
+
+        // Active low reset.
         if (~rst_n) begin
-            State <= Bang;
-            set_timer <= 1;
-            timer_in <= RESET_CYCLES;
-        end else begin
+            next_state = Bang;
+            set_timer = 1;
+            timer_in = RESET_CYCLES;
+        end
+        // Rest of the logic.
+        else begin
             if (deplete_battery && State != Bang && State != Dead) begin
-                battery_left <= battery_left - 1;
+                next_battery = battery_left - 1;
             end
 
             case(State)
                 Bang: begin
                     if (timer == 0) begin
-                        State <= Default;
-                        cat_pos_x <= START_POS_X;
-                        cat_pos_y <= START_POS_Y;
-                        lives_left <= 9;
-                        battery_left <= 8;
+                        next_state = Default;
+                        next_cat_pos_x = START_POS_X;
+                        next_cat_pos_y = START_POS_Y;
+                        next_lives = 9;
+                        next_battery = 8;
                     end
                 end
                 Default: begin
                     if (battery_left == 0) begin
-                        State <= Dead;
-                        lives_left <= lives_left - 1;
-                        set_timer <= 1;
-                        timer_in <= DEAD_CYCLES;
+                        next_state = Dead;
+                        next_lives = lives_left - 1;
+                        set_timer = 1;
+                        timer_in = DEAD_CYCLES;
                     end else if (X == 1) begin
-                        State <= Playing;
-                        set_timer <= 1;
-                        timer_in <= PLAY_TIME;
+                        next_state = Playing;
+                        set_timer = 1;
+                        timer_in = PLAY_TIME;
                     end else if (Y == 1) begin
-                        State <= Sleeping;
-                        set_timer <= 1;
-                        timer_in <= SLEEP_TIME;
+                        next_state = Sleeping;
+                        set_timer = 1;
+                        timer_in = SLEEP_TIME;
                     end else if (A == 1) begin
-                        State <= Eating;
-                        total_fish_caught <= FISH_TO_CATCH;
+                        next_state = Eating;
+                        next_total_fish_caught = FISH_TO_CATCH;
                     end
                 end
                 Eating: begin
                     if (B == 1) begin
-                        State <= Default;
+                        next_state = Default;
                     end
 
                     // Move buttons.
                     if (left == 1) begin
-                        has_moved_left <= 1;
-                        has_moved_right <= 0;
+                        next_has_moved_left = 1;
+                        next_has_moved_right = 0;
                         if ((timer == 0 || ~has_moved_left) && STEP_INTERVAL > 0) begin
-                            set_timer <= 1;
-                            timer_in <= STEP_INTERVAL;
-                            cat_pos_x <= cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
+                            set_timer = 1;
+                            timer_in = STEP_INTERVAL;
+                            next_cat_pos_x = cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
                         end else if (~has_moved_left && STEP_INTERVAL < 0) begin
-                            cat_pos_x <= cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
+                            next_cat_pos_x = cat_pos_x > MIN_POS_X + STEP_SIZE ? cat_pos_x - STEP_SIZE : MIN_POS_X;
                         end
                     end else if (right == 1) begin 
-                        has_moved_left <= 0;
-                        has_moved_right <= 1;
+                        next_has_moved_left = 0;
+                        next_has_moved_right = 1;
                         if ((timer == 0 || ~has_moved_right) && STEP_INTERVAL > 0) begin
-                            set_timer <= 1;
-                            timer_in <= STEP_INTERVAL;
-                            cat_pos_x <= cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
+                            set_timer = 1;
+                            timer_in = STEP_INTERVAL;
+                            next_cat_pos_x = cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
                         end else if (~has_moved_right && STEP_INTERVAL < 0) begin
-                            cat_pos_x <= cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
+                            next_cat_pos_x = cat_pos_x < MAX_POS_X - STEP_SIZE ? cat_pos_x + STEP_SIZE : MAX_POS_X;
                         end
                     end else begin
-                        has_moved_left <= 0;
-                        has_moved_right <= 0;
+                        next_has_moved_left = 0;
+                        next_has_moved_right = 0;
                     end
                     
                     if (down == 1) begin
-                        has_moved_up <= 0;
-                        has_moved_down <= 1;
+                        next_has_moved_up = 0;
+                        next_has_moved_down = 1;
                         if ((timer == 0 || ~has_moved_down) && STEP_INTERVAL > 0) begin
-                            set_timer <= 1;
-                            timer_in <= STEP_INTERVAL;
-                            cat_pos_y <= cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
+                            set_timer = 1;
+                            timer_in = STEP_INTERVAL;
+                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
                         end else if (~has_moved_down && STEP_INTERVAL < 0) begin
-                            cat_pos_y <= cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
+                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - STEP_SIZE ? cat_pos_y + STEP_SIZE : MAX_POS_Y;
                         end
                     end else if (up == 1) begin 
-                        has_moved_up <= 1;
-                        has_moved_down <= 0;
+                        next_has_moved_up = 1;
+                        next_has_moved_down = 0;
                         if ((timer == 0 || ~has_moved_up) && STEP_INTERVAL > 0) begin
-                            set_timer <= 1;
-                            timer_in <= STEP_INTERVAL;
-                            cat_pos_y <= cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
+                            set_timer = 1;
+                            timer_in = STEP_INTERVAL;
+                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
                         end else if (~has_moved_up && STEP_INTERVAL < 0) begin
-                            cat_pos_y <= cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
+                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + STEP_SIZE ? cat_pos_y - STEP_SIZE : MIN_POS_Y;
                         end
                     end else begin
-                        has_moved_up <= 0;
-                        has_moved_down <= 0;
+                        next_has_moved_up = 0;
+                        next_has_moved_down = 0;
                     end
 
                     // Fish caught.
                     if (fish_caught) begin
-                        total_fish_caught <= total_fish_caught - 1;
-                        if (total_fish_caught == 1) begin // Since the previous line is a non-blocking assigment, we have to look at what the value will be, not what it is.
-                            State <= Default;
-                            battery_left <= battery_left == 8 ? 8 : (battery_left + 1);
+                        next_total_fish_caught = total_fish_caught - 1;
+                        if (next_total_fish_caught == 0) begin
+                            next_state = Default;
+                            next_battery = battery_left == 8 ? 8 : (battery_left + 1);
                         end
                     end
                 end
                 Sleeping: begin
                     if (battery_left == 0) begin
-                        State <= Dead;
-                        lives_left <= lives_left - 1;
-                        set_timer <= 1;
-                        timer_in <= DEAD_CYCLES;
+                        next_state = Dead;
+                        next_lives = lives_left - 1;
+                        set_timer = 1;
+                        timer_in = DEAD_CYCLES;
                     end else if (B == 1) begin
-                        State <= Default;
+                        next_state = Default;
                     end else if (timer == 0) begin
-                        battery_left <= battery_left == 8 ? 8 : (battery_left + 1);
-                        set_timer <= 1;
-                        timer_in <= SLEEP_TIME;
+                        next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                        set_timer = 1;
+                        timer_in = SLEEP_TIME;
                     end
                 end
                 Playing: begin
                     if (battery_left == 0) begin
-                        State <= Dead;
-                        lives_left <= lives_left - 1;
-                        set_timer <= 1;
-                        timer_in <= DEAD_CYCLES;
+                        next_state = Dead;
+                        next_lives = lives_left - 1;
+                        set_timer = 1;
+                        timer_in = DEAD_CYCLES;
                     end else if (B == 1) begin
-                        State <= Default;
+                        next_state = Default;
                     end else if (timer == 0) begin
-                        battery_left <= battery_left == 8 ? 8 : (battery_left + 1);
-                        set_timer <= 1;
-                        timer_in <= PLAY_TIME;
+                        next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                        set_timer = 1;
+                        timer_in = PLAY_TIME;
                     end
                 end
                 Dead: begin
                     if (lives_left != 0 && timer == 0) begin
-                        State <= Default;
-                        battery_left <= 8;
+                        next_state = Default;
+                        next_battery = 8;
                     end else if (timer == 0) begin
-                        State <= Bang;
-                        set_timer <= 1;
-                        timer_in <= RESET_CYCLES;
+                        next_state = Bang;
+                        set_timer = 1;
+                        timer_in = RESET_CYCLES;
                     end
                 end
                 default: begin
