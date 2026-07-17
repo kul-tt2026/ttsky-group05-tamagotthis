@@ -18,3 +18,15 @@ Explain how to use your project
 ## External hardware
 
 List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+
+
+geluiden voor
+- fish_caught
+- play_bang
+- play_default
+- play_sleeping
+- play_playing
+- play_dead
+- signaal batterij bijna leeg
+
+play sleeping: wiegelied
