@@ -237,8 +237,8 @@ module tb_clock_divider ();
   reg clk;
   reg rst_n;
   
-  reg output_2_bits[2];
-  reg output_4_bits[4];
+  reg [2:0] output_2_bits;
+  reg [4:0] output_4_bits;
 
   // Replace tt_um_example with your module name:
   clock_divider #(.DIVIDER_MSB(2)) clock_divider_2_bits_dut (
