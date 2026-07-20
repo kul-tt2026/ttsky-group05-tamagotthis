@@ -269,11 +269,11 @@ module tb_settings_manager ();
   reg clk;
   reg rst_n;
   
-  reg inputs_a[3];
-  reg inputs_b[2];
+  reg [2:0] inputs_a;
+  reg [1:0] inputs_b;
 
-  reg [0:0] outputs_a[3];
-  reg [1:0] outputs_b[2];
+  reg [2:0] outputs_a;
+  reg [3:0] outputs_b;
 
   // Replace tt_um_example with your module name:
   settings_manager #(.SETTINGS_COUNT(3), .OPTIONS_COUNT(2)) tb_settings_manager_a_dut (
