@@ -663,4 +663,42 @@ async def battery_max_test(dut):
     dut._log.info("    Sleeping for a long time successul, battery levels did not exceed 8.")
 
 
+# Tests if the cat_mirrorred signal is correct in the eating state.
+@cocotb.test()
+async def cat_mirrorred_eating_test(dut):
+    await setup_test(dut, 12)
 
+    dut._log.info("Entering Eating state.")
+    dut.A.value = 1
+    await ClockCycles(dut.clk, 1)
+    dut.A.value = 0
+    await ClockCycles(dut.clk, 1)
+    assert_state(dut, STATE_EATING)
+    dut._log.info("    Entered Eating state successfully.")
+    
+    for i in range(2):
+        dut._log.info("Moving left.")
+        dut.left.value = 1
+        await ClockCycles(dut.clk, 1)
+        dut.left.value = 0
+        await ClockCycles(dut.clk, 1)
+        assert dut.cat_mirrorred.value == 0
+        dut._log.info("    Moved left, cat is not mirrorred.")
+
+        dut._log.info("Standing still.")
+        await ClockCycles(dut.clk, 10)
+        assert dut.cat_mirrorred.value == 0
+        dut._log.info("    Stood still, cat is still not mirrorred.")
+
+        dut._log.info("Moving right.")
+        dut.right.value = 1
+        await ClockCycles(dut.clk, 1)
+        dut.right.value = 0
+        await ClockCycles(dut.clk, 1)
+        assert dut.cat_mirrorred.value == 1
+        dut._log.info("    Moved right, cat is mirrorred.")
+
+        dut._log.info("Standing still.")
+        await ClockCycles(dut.clk, 10)
+        assert dut.cat_mirrorred.value == 1
+        dut._log.info("    Stood still, cat is still mirrorred.")

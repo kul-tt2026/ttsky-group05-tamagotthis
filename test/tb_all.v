@@ -61,7 +61,7 @@ module tb_main_controller ();
   reg rst_n, clk;
   reg left, right, up, down, A, B, X, Y;
   reg is_sleeping, fish_caught, is_playing, is_dead, is_eating, show_bang, deplete_battery, battery_almost_empty;
-  reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping;
+  reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping, cat_mirrorred;
   reg [9:0] cat_pos_x, cat_pos_y;
   reg [3:0] lives_left, battery_left;
 
@@ -93,6 +93,7 @@ module tb_main_controller ();
       .battery_almost_empty(battery_almost_empty),
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
+      .cat_mirrorred(cat_mirrorred),
       .lives_left(lives_left),
       .battery_left(battery_left)
   );

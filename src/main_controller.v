@@ -19,6 +19,7 @@ module main_controller (
     output reg [3:0] lives_left,                            // The number of lives the cat has left, to be shown on the VGA.
     output reg [3:0] battery_left,                          // The number of battery bars the cat has left, to be shown on the VGA.
     output battery_almost_empty,                            // Signals that the battery is almost empty.
+    output reg cat_mirrorred,                               // Signals whether the cat image should be mirrorred.
     output is_eating,                                       // Signals that the food minigame is currently active.
     output show_bang, is_dead, is_sleeping, is_playing,     // Signals to the VGA about extra stuff to render and to the timer to affect the battery.
     output is_default_state,                                // Signals to the VGA that the cat is in the default state.
@@ -71,7 +72,7 @@ module main_controller (
     reg [$clog2(FISH_TO_CATCH+1)-1:0] total_fish_caught;
     reg has_moved_left, has_moved_right, has_moved_up, has_moved_down;
 
-    reg next_has_moved_left, next_has_moved_right, next_has_moved_up, next_has_moved_down;
+    reg next_has_moved_left, next_has_moved_right, next_has_moved_up, next_has_moved_down, next_cat_mirrorred;
     reg [2:0] next_state;
     reg [3:0] next_lives, next_battery;
     reg [9:0] next_cat_pos_x, next_cat_pos_y;
@@ -91,6 +92,7 @@ module main_controller (
         cat_pos_x <= next_cat_pos_x;
         cat_pos_y <= next_cat_pos_y;
         total_fish_caught <= next_total_fish_caught;
+        cat_mirrorred <= next_cat_mirrorred;
         has_moved_left <= next_has_moved_left;
         has_moved_up <= next_has_moved_up;
         has_moved_right <= next_has_moved_right;
@@ -105,6 +107,7 @@ module main_controller (
         next_battery = battery_left;
         next_cat_pos_x = cat_pos_x;
         next_cat_pos_y = cat_pos_y;
+        next_cat_mirrorred = cat_mirrorred;
         next_total_fish_caught = total_fish_caught;
         next_has_moved_left = 1'bx;
         next_has_moved_down = 1'bx;
@@ -160,6 +163,7 @@ module main_controller (
 
                     // Move buttons.
                     if (left == 1) begin
+                        next_cat_mirrorred = 0;
                         next_has_moved_left = 1;
                         next_has_moved_right = 0;
                         if (STEP_INTERVAL > 0) begin
@@ -174,6 +178,7 @@ module main_controller (
                             end
                         end
                     end else if (right == 1) begin
+                        next_cat_mirrorred = 1;
                         next_has_moved_left = 0;
                         next_has_moved_right = 1;
                         if (STEP_INTERVAL > 0) begin
