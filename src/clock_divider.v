@@ -9,7 +9,14 @@
  */
 module clock_divider #(parameter integer DIVIDER_MSB = 0)
                       (input rst_n, clk,                                               // Global active-low reset and clock.
-                       output reg slow_clocks[DIVIDER_MSB]
+                       output reg [DIVIDER_MSB:0] slow_clocks
 );
-
+    always @(posedge clk or rst_n) begin
+        if (~rst_n) begin
+            slow_clocks <= 0;
+        end
+        else begin
+            slow_clocks <= slow_clocks + 1;
+        end
+    end
 endmodule
