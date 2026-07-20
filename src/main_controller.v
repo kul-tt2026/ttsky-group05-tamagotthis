@@ -19,6 +19,7 @@ module main_controller (
     output [3:0] lives_left,                                // The number of lives the cat has left, to be shown on the VGA.
     output [3:0] battery_left,                              // The number of battery bars the cat has left, to be shown on the VGA.
     output battery_almost_empty,                            // Signals that the battery is almost empty.
+    output cat_mirrorred,                                   // Signals whether the cat image should be mirrorred.
     output is_eating,                                       // Signals that the food minigame is currently active.
     output show_bang, is_dead, is_sleeping, is_playing,     // Signals to the VGA about extra stuff to render and to the timer to affect the battery.
     output is_default_state,                                // Signals to the VGA that the cat is in the default state.
