@@ -15,10 +15,13 @@ module settings_manager #(parameter integer SETTINGS_COUNT = 1,
                           input [SETTINGS_COUNT-1:0] inputs,                              // Input signals whose rising edges will result in the appropriate setting changing.
                           output [SETTINGS_COUNT*$clog2(OPTIONS_COUNT)-1:0] settings      // Output signals of the settings.
 );
+    // Used to detect the rst_n falling edge.
     reg rst_n_last_cycle;
     always @(posedge clk) begin
         rst_n_last_cycle <= rst_n;
     end
+
+    // Generate individual settings.
     genvar i;
     generate
         for (i = 0; i < SETTINGS_COUNT; i = i + 1) begin
@@ -29,7 +32,7 @@ module settings_manager #(parameter integer SETTINGS_COUNT = 1,
                 if (~rst_n && rst_n_last_cycle) begin // Reset on falling edge of rst_n.
                     setting <= 0;
                 end
-                else if (~rst_n) begin // Only function when in the reset state.
+                else if (~rst_n) begin // Only function when rst_n is low.
                     setting <= inputs[i] && ~input_last_cycle ? setting + 1: setting;
                 end
             end
