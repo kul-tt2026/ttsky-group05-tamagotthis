@@ -702,3 +702,17 @@ async def cat_mirrorred_eating_test(dut):
         await ClockCycles(dut.clk, 10)
         assert dut.cat_mirrorred.value == 1
         dut._log.info("    Stood still, cat is still mirrorred.")
+
+
+# This test does nothing, it simply puts the tamagotchi in a state for an extended period of time so you can inspect the waveforms.
+@cocotb.test()
+async def free_test(dut):
+    await setup_test(dut, 13)
+
+    # dut.X.value = 1
+    # await ClockCycles(dut.clk, 1)
+    # dut.X.value = 0
+    # await ClockCycles(dut.clk, 1)
+    assert_state(dut, STATE_DEFAULT)
+    
+    await ClockCycles(dut.clk, 500)
