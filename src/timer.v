@@ -16,4 +16,54 @@ module timer (
     output deplete_battery                                          // Signals that the battery has to drop one level.
 );
 
+    parameter CLOCK_BITS = 8;
+
+    // The depletion times represent the number of clock cycles that need to pass before a deplete_battery because of lack of sleep, food or play respectively.
+    // If a reset signal (for example: is_sleeping) comes in in the meantime, the corresponding timer is reset to its corresponding DEPLETION_TIME.
+    // If a depletion timer hits zero, a deplete_battery pulse is sent and the timer is reset to its corresponding FURTHER_DEPLETION_TIME.
+    parameter SLEEP_DEPLETION_TIME = 20;
+    parameter SLEEP_FURTHER_DEPLETION_TIME = 10;
+    parameter EAT_DEPLETION_TIME = 20;
+    parameter EAT_FURTHER_DEPLETION_TIME = 10;
+    parameter PLAY_DEPLETION_TIME = 20;
+    parameter PLAY_FURTHER_DEPLETION_TIME = 10;
+
+    reg [CLOCK_BITS-1:0] sleep_clk, eat_clk, play_clk;
+
+    reg first_clk_signal; // Is this the first clk tick of the slow_clk signal?
+    reg last_slow_clk;
+    
+
+    always @(posedge clk or rst_n) begin // Asynchronous reset.
+        if (~rst_n) begin
+            sleep_clk <= SLEEP_DEPLETION_TIME;
+            eat_clk <= EAT_DEPLETION_TIME;
+            play_clk <= PLAY_DEPLETION_TIME;
+        end
+        else begin // posedge clk.
+            sleep_clk <= is_sleeping                ? SLEEP_DEPLETION_TIME :
+                         slow_clk && ~last_slow_clk ? (
+                                                        sleep_clk == 0 ? SLEEP_FURTHER_DEPLETION_TIME :
+                                                        sleep_clk - 1) :
+                                                      sleep_clk;
+            eat_clk   <= caught_fish                ? EAT_DEPLETION_TIME :
+                         slow_clk && ~last_slow_clk ? (
+                                                        eat_clk == 0 ? EAT_FURTHER_DEPLETION_TIME :
+                                                        eat_clk - 1) :
+                                                      eat_clk;
+            play_clk  <= is_playing                ? PLAY_DEPLETION_TIME :
+                         slow_clk && ~last_slow_clk ? (
+                                                        play_clk == 0 ? PLAY_FURTHER_DEPLETION_TIME :
+                                                        play_clk - 1) :
+                                                      play_clk;
+        end
+    end
+
+    always @(posedge clk) begin
+        last_slow_clk <= slow_clk;
+        first_clk_signal = slow_clk && ~last_slow_clk;
+    end
+
+    assign deplete_battery = (sleep_clk == 0 || eat_clk == 0 || play_clk == 0) && first_clk_signal;
+
 endmodule
