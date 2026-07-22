@@ -23,6 +23,11 @@ make TOPLEVEL=tb_main_controller COCOTB_TEST_MODULES=main_controller_tests
 make TOPLEVEL=tb_audio COCOTB_TEST_MODULES=audio_tests
 make TOPLEVEL=tb_vga COCOTB_TEST_MODULES=vga_tests
 make TOPLEVEL=tb_minigame COCOTB_TEST_MODULES=minigame_tests
+make TOPLEVEL=tb_lfsr COCOTB_TEST_MODULES=lfsr_tests
+# note: the lfsr test doesn't run and it says 'Couldn't find root handle tb_lfsr', 
+#       just change one of the lfsr signals in tb_all from reg to wire, 
+#       e.g.  reg [31:0] seed --> wire [31:0] seed
+#       (don't ask why this works)
 ```
 
 ### Gate-Level Simulation

@@ -211,15 +211,39 @@ module tb_minigame ();
   reg is_eating, fish_caught;
 
   // Replace tt_um_example with your module name:
-  vga vga_dut (
+  minigame minigame_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .is_eating(is_eating),
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
       .fish_pos_x(fish_pos_x),
       .fish_pos_y(fish_pos_y),
-      .fish_caught(fish_caught),
-      .is_eating(is_eating)
+      .fish_caught(fish_caught)
   );
 
 endmodule
+
+module tb_lfsr ();
+
+  initial begin
+    $dumpfile("tb_lfsr.fst");
+    $dumpvars(0,tb_lfsr);
+    #1;
+  end
+
+  reg clk;
+  reg rst_n;
+  reg [31:0] seed;
+  reg [9:0] x,y;
+
+  lfsr lfsr_dut (
+    .clk(clk),
+    .rst_n(rst_n),
+    .seed(seed),
+    .x(x),
+    .y(y)
+  );
+endmodule
+
+
