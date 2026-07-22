@@ -12,6 +12,10 @@ For more information, check the [Tiny Tapeout website](https://tinytapeout.com/h
 
 ### RTL Simulation
 
+In order to run the tests, first, make sure the current working directory is the test folder:
+```sh
+cd test
+```
 To run the tests of the entire project:
 ```sh
 make
@@ -23,6 +27,8 @@ make TOPLEVEL=tb_main_controller COCOTB_TEST_MODULES=main_controller_tests
 make TOPLEVEL=tb_audio COCOTB_TEST_MODULES=audio_tests
 make TOPLEVEL=tb_vga COCOTB_TEST_MODULES=vga_tests
 make TOPLEVEL=tb_minigame COCOTB_TEST_MODULES=minigame_tests
+make TOPLEVEL=tb_clock_divider COCOTB_TEST_MODULES=clock_divider_tests
+make TOPLEVEL=tb_settings_manager COCOTB_TEST_MODULES=settings_manager_tests
 make TOPLEVEL=tb_lfsr COCOTB_TEST_MODULES=lfsr_tests
 # note: the lfsr test doesn't run and it says 'Couldn't find root handle tb_lfsr', 
 #       just change one of the lfsr signals in tb_all from reg to wire, 

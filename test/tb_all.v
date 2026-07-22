@@ -224,6 +224,144 @@ module tb_minigame ();
 
 endmodule
 
+module tb_clock_divider ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_clock_divider.fst");
+    $dumpvars(0, tb_clock_divider);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  reg clk;
+  reg rst_n;
+  
+  reg [2:0] output_2_bits;
+  reg [4:0] output_4_bits;
+
+  // Replace tt_um_example with your module name:
+  clock_divider #(.DIVIDER_MSB(2)) clock_divider_2_bits_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .slow_clocks(output_2_bits)
+  );
+
+  // Replace tt_um_example with your module name:
+  clock_divider #(.DIVIDER_MSB(4)) clock_divider_4_bits_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .slow_clocks(output_4_bits)
+  );
+
+endmodule
+
+module tb_settings_manager ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_settings_manager.fst");
+    $dumpvars(0, tb_settings_manager);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  reg clk;
+  reg rst_n;
+  
+  reg [2:0] inputs_a;
+  reg [1:0] inputs_b;
+
+  reg [2:0] outputs_a;
+  reg [3:0] outputs_b;
+
+  // Replace tt_um_example with your module name:
+  settings_manager #(.SETTINGS_COUNT(3), .OPTIONS_COUNT(2)) tb_settings_manager_a_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .inputs(inputs_a),
+      .settings(outputs_a)
+  );
+
+  // Replace tt_um_example with your module name:
+  settings_manager #(.SETTINGS_COUNT(2), .OPTIONS_COUNT(4)) tb_settings_manager_b_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .inputs(inputs_b),
+      .settings(outputs_b)
+  );
+
+endmodule
+
+module tb_clock_divider ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_clock_divider.fst");
+    $dumpvars(0, tb_clock_divider);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  reg clk;
+  reg rst_n;
+  
+  reg [2:0] output_2_bits;
+  reg [4:0] output_4_bits;
+
+  // Replace tt_um_example with your module name:
+  clock_divider #(.DIVIDER_MSB(2)) clock_divider_2_bits_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .slow_clocks(output_2_bits)
+  );
+
+  // Replace tt_um_example with your module name:
+  clock_divider #(.DIVIDER_MSB(4)) clock_divider_4_bits_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .slow_clocks(output_4_bits)
+  );
+
+endmodule
+
+module tb_settings_manager ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_settings_manager.fst");
+    $dumpvars(0, tb_settings_manager);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  reg clk;
+  reg rst_n;
+  
+  reg [2:0] inputs_a;
+  reg [1:0] inputs_b;
+
+  reg [2:0] outputs_a;
+  reg [3:0] outputs_b;
+
+  // Replace tt_um_example with your module name:
+  settings_manager #(.SETTINGS_COUNT(3), .OPTIONS_COUNT(2)) tb_settings_manager_a_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .inputs(inputs_a),
+      .settings(outputs_a)
+  );
+
+  // Replace tt_um_example with your module name:
+  settings_manager #(.SETTINGS_COUNT(2), .OPTIONS_COUNT(4)) tb_settings_manager_b_dut (
+      .rst_n(rst_n),
+      .clk(clk),
+      .inputs(inputs_b),
+      .settings(outputs_b)
+  );
+
+endmodule
+
 module tb_lfsr ();
 
   initial begin
