@@ -13,6 +13,7 @@ PLAY_DEPLETION_TIME = 20
 PLAY_FURTHER_DEPLETION_TIME = 10
 EAT_DEPLETION_TIME = 20
 EAT_FURTHER_DEPLETION_TIME = 10
+SLOW_CLOCK_FACTOR = 4
 
 
 async def setup_test(dut):
@@ -41,7 +42,7 @@ async def reset_test(dut):
 
     # By repeatedly resetting the timer, there should never be a deplete battery signal.
     for i in range(3):
-        for j in range(int(SLEEP_DEPLETION_TIME * 3 /4)):
+        for j in range(int(SLEEP_DEPLETION_TIME * 3 / 4 * SLOW_CLOCK_FACTOR)):
             await ClockCycles(dut.clk, 1)
             assert dut.deplete_battery.value == 0
         # Reset.
@@ -57,7 +58,7 @@ async def deplete_battery_once_no_eating_test(dut):
     dut.is_playing.value = 1
     dut.is_sleeping.value = 1
 
-    for j in range(EAT_DEPLETION_TIME - 2):
+    for j in range(EAT_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
@@ -72,13 +73,13 @@ async def deplete_battery_multiple_no_eating_test(dut):
     dut.is_playing.value = 1
     dut.is_sleeping.value = 1
 
-    for j in range(EAT_DEPLETION_TIME - 2):
+    for j in range(EAT_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
     assert dut.deplete_battery.value == 1
     for i in range(3):
-        for j in range(EAT_FURTHER_DEPLETION_TIME):
+        for j in range((EAT_FURTHER_DEPLETION_TIME + 1) * SLOW_CLOCK_FACTOR - 1):
             await ClockCycles(dut.clk, 1)
             assert dut.deplete_battery.value == 0
         await ClockCycles(dut.clk, 1)
@@ -91,7 +92,7 @@ async def deplete_battery_once_eating_reset_test(dut):
     dut.is_playing.value = 1
     dut.is_sleeping.value = 1
     
-    for j in range(int(EAT_DEPLETION_TIME / 2)):
+    for j in range(int(EAT_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -100,7 +101,7 @@ async def deplete_battery_once_eating_reset_test(dut):
     dut.caught_fish.value = 0
     await ClockCycles(dut.clk, 1)
 
-    for j in range(int(EAT_DEPLETION_TIME / 2)):
+    for j in range(int(EAT_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -111,13 +112,13 @@ async def deplete_battery_multiple_eating_reset_test(dut):
     dut.is_playing.value = 1
     dut.is_sleeping.value = 1
     
-    for j in range(EAT_DEPLETION_TIME - 2):
+    for j in range(EAT_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
     assert dut.deplete_battery.value == 1
     
-    for j in range(int(EAT_FURTHER_DEPLETION_TIME / 2)):
+    for j in range(int(EAT_FURTHER_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -126,7 +127,7 @@ async def deplete_battery_multiple_eating_reset_test(dut):
     dut.caught_fish.value = 0
     await ClockCycles(dut.clk, 1)
 
-    for j in range(int(EAT_DEPLETION_TIME / 2)):
+    for j in range(int(EAT_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -137,7 +138,7 @@ async def deplete_battery_once_no_sleeping_test(dut):
     dut.is_playing.value = 1
     dut.caught_fish.value = 1
     
-    for j in range(SLEEP_DEPLETION_TIME - 2):
+    for j in range(SLEEP_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
@@ -152,13 +153,13 @@ async def deplete_battery_multiple_no_sleeping_test(dut):
     dut.is_playing.value = 1
     dut.caught_fish.value = 1
     
-    for j in range(SLEEP_DEPLETION_TIME - 2):
+    for j in range(SLEEP_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
     assert dut.deplete_battery.value == 1
     for i in range(3):
-        for j in range(SLEEP_FURTHER_DEPLETION_TIME):
+        for j in range((SLEEP_FURTHER_DEPLETION_TIME + 1) * SLOW_CLOCK_FACTOR - 1):
             await ClockCycles(dut.clk, 1)
             assert dut.deplete_battery.value == 0
         await ClockCycles(dut.clk, 1)
@@ -171,7 +172,7 @@ async def deplete_battery_once_sleeping_reset_test(dut):
     dut.is_playing.value = 1
     dut.caught_fish.value = 1
 
-    for j in range(int(SLEEP_DEPLETION_TIME / 2)):
+    for j in range(int(SLEEP_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -180,7 +181,7 @@ async def deplete_battery_once_sleeping_reset_test(dut):
     dut.is_sleeping.value = 0
     await ClockCycles(dut.clk, 1)
 
-    for j in range(int(SLEEP_DEPLETION_TIME / 2)):
+    for j in range(int(SLEEP_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -191,13 +192,13 @@ async def deplete_battery_multiple_sleeping_reset_test(dut):
     dut.is_playing.value = 1
     dut.caught_fish.value = 1
     
-    for j in range(SLEEP_DEPLETION_TIME - 2):
+    for j in range(SLEEP_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
     assert dut.deplete_battery.value == 1
     
-    for j in range(int(SLEEP_FURTHER_DEPLETION_TIME / 2)):
+    for j in range(int(SLEEP_FURTHER_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -206,7 +207,7 @@ async def deplete_battery_multiple_sleeping_reset_test(dut):
     dut.is_sleeping.value = 0
     await ClockCycles(dut.clk, 1)
 
-    for j in range(int(SLEEP_DEPLETION_TIME / 2)):
+    for j in range(int(SLEEP_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
         
@@ -217,7 +218,7 @@ async def deplete_battery_once_no_playing_test(dut):
     dut.is_sleeping.value = 1
     dut.caught_fish.value = 1
     
-    for j in range(PLAY_DEPLETION_TIME - 2):
+    for j in range(PLAY_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
@@ -232,13 +233,13 @@ async def deplete_battery_multiple_no_playing_test(dut):
     dut.is_sleeping.value = 1
     dut.caught_fish.value = 1
     
-    for j in range(PLAY_DEPLETION_TIME - 2):
+    for j in range(PLAY_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
     assert dut.deplete_battery.value == 1
     for i in range(3):
-        for j in range(PLAY_FURTHER_DEPLETION_TIME):
+        for j in range((PLAY_FURTHER_DEPLETION_TIME + 1) * SLOW_CLOCK_FACTOR - 1):
             await ClockCycles(dut.clk, 1)
             assert dut.deplete_battery.value == 0
         await ClockCycles(dut.clk, 1)
@@ -251,7 +252,7 @@ async def deplete_battery_once_playing_reset_test(dut):
     dut.is_sleeping.value = 1
     dut.caught_fish.value = 1
 
-    for j in range(int(PLAY_DEPLETION_TIME / 2)):
+    for j in range(int(PLAY_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -260,7 +261,7 @@ async def deplete_battery_once_playing_reset_test(dut):
     dut.is_playing.value = 0
     await ClockCycles(dut.clk, 1)
 
-    for j in range(int(PLAY_DEPLETION_TIME / 2)):
+    for j in range(int(PLAY_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -271,13 +272,13 @@ async def deplete_battery_multiple_playing_reset_test(dut):
     dut.is_sleeping.value = 1
     dut.caught_fish.value = 1
     
-    for j in range(PLAY_DEPLETION_TIME - 2):
+    for j in range(PLAY_DEPLETION_TIME * SLOW_CLOCK_FACTOR - 3):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
     await ClockCycles(dut.clk, 1)
     assert dut.deplete_battery.value == 1
     
-    for j in range(int(PLAY_FURTHER_DEPLETION_TIME / 2)):
+    for j in range(int(PLAY_FURTHER_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
 
@@ -286,7 +287,7 @@ async def deplete_battery_multiple_playing_reset_test(dut):
     dut.is_playing.value = 0
     await ClockCycles(dut.clk, 1)
 
-    for j in range(int(PLAY_DEPLETION_TIME / 2)):
+    for j in range(int(PLAY_DEPLETION_TIME / 2 * SLOW_CLOCK_FACTOR)):
         await ClockCycles(dut.clk, 1)
         assert dut.deplete_battery.value == 0
         

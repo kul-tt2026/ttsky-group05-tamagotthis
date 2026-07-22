@@ -110,14 +110,23 @@ module tb_timer ();
 
   // Wire up the inputs and outputs:
   reg clk;
+  reg [2:0] slow_clks;
   reg rst_n;
   reg is_sleeping, caught_fish, is_playing;
   wire deplete_battery;
 
   // Replace tt_um_example with your module name:
+  clock_divider #(.DIVIDER_MSB(1)) clock_divider (
+      .rst_n(rst_n),
+      .clk(clk),
+      .slow_clocks(slow_clks)
+  );
+
+  // Replace tt_um_example with your module name:
   timer timer_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .slow_clk(slow_clks[1]),
       .is_sleeping(is_sleeping),
       .caught_fish(caught_fish),
       .is_playing(is_playing),
