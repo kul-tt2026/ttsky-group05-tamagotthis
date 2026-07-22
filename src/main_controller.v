@@ -88,25 +88,33 @@ module main_controller (
     // Movement system.
     reg [9:0] next_cat_pos_x, next_cat_pos_y, next_cat_pos_x_play;
 
-    always @(posedge clk) begin
-        if (set_timer) begin 
-            timer <= timer_in;
+    always @(posedge clk, negedge rst_n) begin
+        // Active low reset.
+        if (~rst_n) begin
+            State <= Bang;
+            timer <= RESET_CYCLES;
+            cat_mirrorred <= 0;
         end
-        else begin 
-            timer <= timer - 1;
-        end
+        else begin
+            if (set_timer) begin 
+                timer <= timer_in;
+            end
+            else begin 
+                timer <= timer - 1;
+            end
 
-        State <= next_state;
-        lives_left <= next_lives;
-        battery_left <= next_battery;
-        total_fish_caught <= next_total_fish_caught;
-        cat_mirrorred <= State == Playing ? next_cat_mirrorred_play : next_cat_mirrorred;
-        has_moved_left <= next_has_moved_left;
-        has_moved_up <= next_has_moved_up;
-        has_moved_right <= next_has_moved_right;
-        has_moved_down <= next_has_moved_down;
-        cat_pos_x <= State == Playing ? next_cat_pos_x_play : next_cat_pos_x;
-        cat_pos_y <= next_cat_pos_y;
+            State <= next_state;
+            lives_left <= next_lives;
+            battery_left <= next_battery;
+            total_fish_caught <= next_total_fish_caught;
+            cat_mirrorred <= State == Playing ? next_cat_mirrorred_play : next_cat_mirrorred;
+            has_moved_left <= next_has_moved_left;
+            has_moved_up <= next_has_moved_up;
+            has_moved_right <= next_has_moved_right;
+            has_moved_down <= next_has_moved_down;
+            cat_pos_x <= State == Playing ? next_cat_pos_x_play : next_cat_pos_x;
+            cat_pos_y <= next_cat_pos_y;
+        end
     end
     
     always @(*) begin
@@ -124,69 +132,47 @@ module main_controller (
         next_has_moved_right = 1'bx;
         next_has_moved_up = 1'bx;
         timer_in = {TIMER_BITS{1'bx}};
-
-        // Active low reset.
-        if (~rst_n) begin
-            next_state = Bang;
-            set_timer = 1;
-            timer_in = RESET_CYCLES;
-            next_cat_mirrorred = 0;
+        
+        if (deplete_battery && State != Bang && State != Dead) begin
+            next_battery = battery_left - 1;
         end
-        // Rest of the logic.
-        else begin
-            if (deplete_battery && State != Bang && State != Dead) begin
-                next_battery = battery_left - 1;
-            end
 
-            case(State)
-                Bang: begin
-                    if (timer == 0) begin
-                        next_state = Default;
-                        next_cat_pos_x = START_POS_X;
-                        next_cat_pos_y = START_POS_Y;
-                        next_lives = 9;
-                        next_battery = 8;
-                        if (DEFAULT_STEP_INTERVAL > 0) begin
-                            set_timer = 1;
-                            timer_in = DEFAULT_STEP_INTERVAL;
-                        end
+        case(State)
+            Bang: begin
+                if (timer == 0) begin
+                    next_state = Default;
+                    next_cat_pos_x = START_POS_X;
+                    next_cat_pos_y = START_POS_Y;
+                    next_lives = 9;
+                    next_battery = 8;
+                    if (DEFAULT_STEP_INTERVAL > 0) begin
+                        set_timer = 1;
+                        timer_in = DEFAULT_STEP_INTERVAL;
                     end
                 end
-                Default: begin
-                    if (battery_left == 0) begin
-                        next_state = Dead;
-                        next_lives = lives_left - 1;
+            end
+            Default: begin
+                if (battery_left == 0) begin
+                    next_state = Dead;
+                    next_lives = lives_left - 1;
+                    set_timer = 1;
+                    timer_in = DEAD_CYCLES;
+                end else if (X == 1) begin
+                    next_state = Playing;
+                    set_timer = 1;
+                    timer_in = PLAY_TIME;
+                end else if (Y == 1) begin
+                    next_state = Sleeping;
+                    set_timer = 1;
+                    timer_in = SLEEP_TIME;
+                end else if (A == 1) begin
+                    next_state = Eating;
+                    next_total_fish_caught = FISH_TO_CATCH;
+                end
+                if (DEFAULT_STEP_INTERVAL > 0) begin
+                    if (timer == 0) begin
                         set_timer = 1;
-                        timer_in = DEAD_CYCLES;
-                    end else if (X == 1) begin
-                        next_state = Playing;
-                        set_timer = 1;
-                        timer_in = PLAY_TIME;
-                    end else if (Y == 1) begin
-                        next_state = Sleeping;
-                        set_timer = 1;
-                        timer_in = SLEEP_TIME;
-                    end else if (A == 1) begin
-                        next_state = Eating;
-                        next_total_fish_caught = FISH_TO_CATCH;
-                    end
-                    if (DEFAULT_STEP_INTERVAL > 0) begin
-                        if (timer == 0) begin
-                            set_timer = 1;
-                            timer_in = DEFAULT_STEP_INTERVAL;
-                            if (cat_pos_x == MAX_POS_X) begin
-                                next_cat_pos_x = MAX_POS_X - DEFAULT_STEP_SIZE;
-                                next_cat_mirrorred = 0;
-                            end else if (cat_pos_x == MIN_POS_X) begin
-                                next_cat_mirrorred = 1;
-                                next_cat_pos_x = MIN_POS_X + DEFAULT_STEP_SIZE;
-                            end else if (cat_mirrorred) begin
-                                next_cat_pos_x = cat_pos_x + DEFAULT_STEP_SIZE >= MAX_POS_X ? MAX_POS_X : cat_pos_x + DEFAULT_STEP_SIZE;
-                            end else begin
-                                next_cat_pos_x = cat_pos_x - DEFAULT_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
-                            end
-                        end
-                    end else if (DEFAULT_STEP_INTERVAL == 0) begin
+                        timer_in = DEFAULT_STEP_INTERVAL;
                         if (cat_pos_x == MAX_POS_X) begin
                             next_cat_pos_x = MAX_POS_X - DEFAULT_STEP_SIZE;
                             next_cat_mirrorred = 0;
@@ -199,133 +185,145 @@ module main_controller (
                             next_cat_pos_x = cat_pos_x - DEFAULT_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
                         end
                     end
-                end
-                Eating: begin
-                    if (B == 1) begin
-                        next_state = Default;
-                    end
-
-                    // Move buttons.
-                    if (left == 1) begin
+                end else if (DEFAULT_STEP_INTERVAL == 0) begin
+                    if (cat_pos_x == MAX_POS_X) begin
+                        next_cat_pos_x = MAX_POS_X - DEFAULT_STEP_SIZE;
                         next_cat_mirrorred = 0;
-                        next_has_moved_left = 1;
-                        next_has_moved_right = 0;
-                        if (EAT_STEP_INTERVAL > 0) begin
-                            if ((timer == 0 || ~has_moved_left)) begin
-                                set_timer = 1;
-                                timer_in = EAT_STEP_INTERVAL;
-                                next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
-                            end
-                        end else begin
-                            if (~has_moved_left) begin
-                                next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
-                            end
-                        end
-                    end else if (right == 1) begin
+                    end else if (cat_pos_x == MIN_POS_X) begin
                         next_cat_mirrorred = 1;
-                        next_has_moved_left = 0;
-                        next_has_moved_right = 1;
-                        if (EAT_STEP_INTERVAL > 0) begin
-                            if ((timer == 0 || ~has_moved_right)) begin
-                                set_timer = 1;
-                                timer_in = EAT_STEP_INTERVAL;
-                                next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
-                            end
-                        end else begin
-                            if (~has_moved_right) begin
-                                next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
-                            end
-                        end
+                        next_cat_pos_x = MIN_POS_X + DEFAULT_STEP_SIZE;
+                    end else if (cat_mirrorred) begin
+                        next_cat_pos_x = cat_pos_x + DEFAULT_STEP_SIZE >= MAX_POS_X ? MAX_POS_X : cat_pos_x + DEFAULT_STEP_SIZE;
                     end else begin
-                        next_has_moved_left = 0;
-                        next_has_moved_right = 0;
+                        next_cat_pos_x = cat_pos_x - DEFAULT_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
                     end
-                    
-                    if (down == 1) begin
-                        next_has_moved_up = 0;
-                        next_has_moved_down = 1;
-                        
-                        if (EAT_STEP_INTERVAL > 0) begin
-                            if ((timer == 0 || ~has_moved_down)) begin
-                                set_timer = 1;
-                                timer_in = EAT_STEP_INTERVAL;
-                                next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
-                            end
-                        end else begin
-                            if (~has_moved_down) begin
-                                next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
-                            end
-                        end
-                    end else if (up == 1) begin 
-                        next_has_moved_up = 1;
-                        next_has_moved_down = 0;
-                        if (EAT_STEP_INTERVAL > 0) begin
-                            if ((timer == 0 || ~has_moved_up)) begin
-                                set_timer = 1;
-                                timer_in = EAT_STEP_INTERVAL;
-                                next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
-                            end
-                        end else begin
-                            if (~has_moved_up) begin
-                                next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
-                            end
-                        end
-                    end else begin
-                        next_has_moved_up = 0;
-                        next_has_moved_down = 0;
-                    end
+                end
+            end
+            Eating: begin
+                if (B == 1) begin
+                    next_state = Default;
+                end
 
-                    // Fish caught.
-                    if (fish_caught) begin
-                        next_total_fish_caught = total_fish_caught - 1;
-                        if (next_total_fish_caught == 0) begin
-                            next_state = Default;
-                            next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                // Move buttons.
+                if (left == 1) begin
+                    next_cat_mirrorred = 0;
+                    next_has_moved_left = 1;
+                    next_has_moved_right = 0;
+                    if (EAT_STEP_INTERVAL > 0) begin
+                        if ((timer == 0 || ~has_moved_left)) begin
+                            set_timer = 1;
+                            timer_in = EAT_STEP_INTERVAL;
+                            next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
+                        end
+                    end else begin
+                        if (~has_moved_left) begin
+                            next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
                         end
                     end
+                end else if (right == 1) begin
+                    next_cat_mirrorred = 1;
+                    next_has_moved_left = 0;
+                    next_has_moved_right = 1;
+                    if (EAT_STEP_INTERVAL > 0) begin
+                        if ((timer == 0 || ~has_moved_right)) begin
+                            set_timer = 1;
+                            timer_in = EAT_STEP_INTERVAL;
+                            next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
+                        end
+                    end else begin
+                        if (~has_moved_right) begin
+                            next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
+                        end
+                    end
+                end else begin
+                    next_has_moved_left = 0;
+                    next_has_moved_right = 0;
                 end
-                Sleeping: begin
-                    if (battery_left == 0) begin
-                        next_state = Dead;
-                        next_lives = lives_left - 1;
-                        set_timer = 1;
-                        timer_in = DEAD_CYCLES;
-                    end else if (B == 1) begin
+                
+                if (down == 1) begin
+                    next_has_moved_up = 0;
+                    next_has_moved_down = 1;
+                    
+                    if (EAT_STEP_INTERVAL > 0) begin
+                        if ((timer == 0 || ~has_moved_down)) begin
+                            set_timer = 1;
+                            timer_in = EAT_STEP_INTERVAL;
+                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
+                        end
+                    end else begin
+                        if (~has_moved_down) begin
+                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
+                        end
+                    end
+                end else if (up == 1) begin 
+                    next_has_moved_up = 1;
+                    next_has_moved_down = 0;
+                    if (EAT_STEP_INTERVAL > 0) begin
+                        if ((timer == 0 || ~has_moved_up)) begin
+                            set_timer = 1;
+                            timer_in = EAT_STEP_INTERVAL;
+                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
+                        end
+                    end else begin
+                        if (~has_moved_up) begin
+                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
+                        end
+                    end
+                end else begin
+                    next_has_moved_up = 0;
+                    next_has_moved_down = 0;
+                end
+
+                // Fish caught.
+                if (fish_caught) begin
+                    next_total_fish_caught = total_fish_caught - 1;
+                    if (next_total_fish_caught == 0) begin
                         next_state = Default;
-                    end else if (timer == 0) begin
                         next_battery = battery_left == 8 ? 8 : (battery_left + 1);
-                        set_timer = 1;
-                        timer_in = SLEEP_TIME;
                     end
                 end
-                Playing: begin
-                    if (battery_left == 0) begin
-                        next_state = Dead;
-                        next_lives = lives_left - 1;
-                        set_timer = 1;
-                        timer_in = DEAD_CYCLES;
-                    end else if (B == 1) begin
-                        next_state = Default;
-                    end else if (timer == 0) begin
-                        next_battery = battery_left == 8 ? 8 : (battery_left + 1);
-                        set_timer = 1;
-                        timer_in = PLAY_TIME;
-                    end
+            end
+            Sleeping: begin
+                if (battery_left == 0) begin
+                    next_state = Dead;
+                    next_lives = lives_left - 1;
+                    set_timer = 1;
+                    timer_in = DEAD_CYCLES;
+                end else if (B == 1) begin
+                    next_state = Default;
+                end else if (timer == 0) begin
+                    next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                    set_timer = 1;
+                    timer_in = SLEEP_TIME;
                 end
-                Dead: begin
-                    if (lives_left != 0 && timer == 0) begin
-                        next_state = Default;
-                        next_battery = 8;
-                    end else if (timer == 0) begin
-                        next_state = Bang;
-                        set_timer = 1;
-                        timer_in = RESET_CYCLES;
-                    end
+            end
+            Playing: begin
+                if (battery_left == 0) begin
+                    next_state = Dead;
+                    next_lives = lives_left - 1;
+                    set_timer = 1;
+                    timer_in = DEAD_CYCLES;
+                end else if (B == 1) begin
+                    next_state = Default;
+                end else if (timer == 0) begin
+                    next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                    set_timer = 1;
+                    timer_in = PLAY_TIME;
                 end
-                default: begin
+            end
+            Dead: begin
+                if (lives_left != 0 && timer == 0) begin
+                    next_state = Default;
+                    next_battery = 8;
+                end else if (timer == 0) begin
+                    next_state = Bang;
+                    set_timer = 1;
+                    timer_in = RESET_CYCLES;
                 end
-            endcase
-        end
+            end
+            default: begin
+            end
+        endcase
     end
     
     // Cat movement in the Playing state.
@@ -346,12 +344,6 @@ module main_controller (
                 set_play_step_timer = 0;
                 next_cat_mirrorred_play = cat_mirrorred;
                 play_step_timer_in = {$bits(PLAY_STEP_INTERVAL+1){1'bx}};
-
-                // Active low reset.
-                if (~rst_n) begin
-                    set_play_step_timer = 1;
-                    play_step_timer_in = 0;
-                end
 
                 if ((State == Default && X == 1) || (State == Playing && play_step_timer == 0)) begin
                     set_play_step_timer = 1;

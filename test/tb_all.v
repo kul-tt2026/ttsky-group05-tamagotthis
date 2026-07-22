@@ -302,3 +302,82 @@ module tb_settings_manager ();
   );
 
 endmodule
+
+module tb_simulator ();
+
+  // // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  // initial begin
+  //   $dumpfile("tb_simulator.fst");
+  //   $dumpvars(0, tb_simulator);
+  //   #1;
+  // end
+
+  // Wire up the inputs and outputs:
+  // We simulate using 3 kHz instead of 25.175 MHz, otherwise, the simulation slows down too much
+  reg clk, clk_24Hz, clk_timer;
+  reg rst_n;
+  
+  reg left, right, up, down, A, B, X, Y, fish_caught;
+
+  reg is_sleeping, is_playing, is_dead, is_eating, show_bang, deplete_battery, battery_almost_empty;
+  reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping, cat_mirrorred;
+  reg [9:0] cat_pos_x, cat_pos_y;
+  reg [3:0] lives_left, battery_left;
+  reg [17:0] slow_clocks;
+
+  wire timing_option; // 0: slow timing, 1: fast timing.
+  
+  clock_divider #(.DIVIDER_MSB(17)) clock_divider(.rst_n(rst_n),
+                                                  .clk(clk),
+                                                  .slow_clocks(slow_clocks));
+
+  assign clk_24Hz = slow_clocks[7];
+  assign clk_timer = timing_option ? slow_clocks[17] : slow_clocks[13];
+  
+  settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
+                                                                             .clk(clk),
+                                                                             .inputs(A),
+                                                                             .settings(timing_option));
+
+  timer timer(.rst_n(rst_n),
+              .clk(clk_24Hz),
+              .slow_clk(clk_timer),
+              .is_sleeping(is_sleeping),
+              .is_playing(is_playing),
+              .caught_fish(fish_caught),
+              .deplete_battery(deplete_battery));
+
+  // Replace tt_um_example with your module name:
+  main_controller main_controller (
+      .rst_n(rst_n),
+      .clk(clk_24Hz),
+      .left(left),
+      .right(right),
+      .up(up),
+      .down(down),
+      .A(A),
+      .B(B),
+      .X(X),
+      .Y(Y),
+      .is_sleeping(is_sleeping),
+      .fish_caught(fish_caught),
+      .is_playing(is_playing),
+      .is_dead(is_dead),
+      .is_eating(is_eating),
+      .is_default_state(is_default_state),
+      .show_bang(show_bang),
+      .play_bang(play_bang),
+      .play_default(play_default),
+      .play_dead(play_dead),
+      .play_playing(play_playing),
+      .play_sleeping(play_sleeping),
+      .deplete_battery(deplete_battery),
+      .battery_almost_empty(battery_almost_empty),
+      .cat_pos_x(cat_pos_x),
+      .cat_pos_y(cat_pos_y),
+      .cat_mirrorred(cat_mirrorred),
+      .lives_left(lives_left),
+      .battery_left(battery_left)
+  );
+
+endmodule

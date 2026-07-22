@@ -30,6 +30,15 @@ make TOPLEVEL=tb_minigame COCOTB_TEST_MODULES=minigame_tests
 make TOPLEVEL=tb_clock_divider COCOTB_TEST_MODULES=clock_divider_tests
 make TOPLEVEL=tb_settings_manager COCOTB_TEST_MODULES=settings_manager_tests
 ```
+To test the tamagotchi in a simulated environment:
+```sh
+PYTHONPATH=$PWD/simulator:$PYTHONPATH make TOPLEVEL=tb_simulator COCOTB_TEST_MODULES=simulator 
+```
+In the bottom right of your screen, a message will pop up that 'port 5000 has been opened', press 'Open in browser'.
+Now you can give keyboard inputs in the browser window, while seeing the results in your terminal.
+In order to add anything to this simulation, have a look at tb_simulator() in tb_all.v, and the test/simulator folder, together with an AI agent (that's how I made it).
+Once visuals and audio are implemented, it might be beneficial to show these outputs in the browser too, I strongly suggest implementing this with an AI agent.
+Currently, you can use the arrow keys to move the cat, the a, b, x and y keys as they are defined in the architecture, r to reset and f to catch a fish. Esc quits the simulation.
 
 ### Gate-Level Simulation
 
