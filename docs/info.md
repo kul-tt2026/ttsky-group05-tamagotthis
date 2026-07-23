@@ -30,3 +30,4 @@ geluiden voor
 - play_playing
 
 play sleeping: wiegelied
+batterij: miauw
