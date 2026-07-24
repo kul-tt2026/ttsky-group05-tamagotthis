@@ -29,10 +29,11 @@ make TOPLEVEL=tb_vga COCOTB_TEST_MODULES=vga_tests
 make TOPLEVEL=tb_minigame COCOTB_TEST_MODULES=minigame_tests
 make TOPLEVEL=tb_clock_divider COCOTB_TEST_MODULES=clock_divider_tests
 make TOPLEVEL=tb_settings_manager COCOTB_TEST_MODULES=settings_manager_tests
-make TOPLEVEL=tb_lfsr COCOTB_TEST_MODULES=lfsr_tests
-# note: the lfsr test doesn't run and it says 'Couldn't find root handle tb_lfsr', 
+make TOPLEVEL=tb_lfsr32 COCOTB_TEST_MODULES=lfsr32_tests
+# note: the lfsr test doesn't run and it says 'Couldn't find root handle tb_lfsr32', 
 #       just change one of the lfsr signals in tb_all from reg to wire, 
 #       e.g.  reg [31:0] seed --> wire [31:0] seed
+#       update: apparently just adding a space after a line inside tb_lfsr32 also fixes the problem
 #       (don't ask why this works)
 ```
 

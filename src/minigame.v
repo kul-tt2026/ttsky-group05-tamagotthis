@@ -36,8 +36,8 @@ wire [9:0] x, y;                                                                
 wire no_overlap_fish;                                                               // tests whether there's no overlap and a buffer distance between the fish's current position and the next proposed position 
 wire valid_x, valid_y;                                                              // signals whether the x / y from the lfsr are valid
 
-wire [31:0] seed = 32'h8000_0001;                                                         // the starting seed doesn't really matter, as long as it's not all zeros
-lfsr #(32,10) random_gen(.seed(seed), .clk(clk), .rst_n(rst_n), .x(x), .y(y));      // helper module to get pseudorandom x and y coordinates
+wire [31:0] seed = 32'h8000_0001;                                                   // the starting seed doesn't really matter, as long as it's not all zeros
+lfsr32 #(10,1) random_gen(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(x), .s2(y));   // helper module to get pseudorandom x and y coordinates
 
 
 /* verilator lint_off UNSIGNED */                                                   // turn off warning that says MIN_X <= x is always true since it's *currently* set to 0 and x is unsigned (so positive)
