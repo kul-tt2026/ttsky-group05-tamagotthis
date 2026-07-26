@@ -203,9 +203,7 @@ module audio (
         endcase
 
         // state machine voor play_bang == 1
-        case (state_bang)
-
-        endcase
+        
 
         end
     end

@@ -1,40 +1,42 @@
-# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
-# SPDX-License-Identifier: Apache-2.0
-
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import RisingEdge
 
 
 @cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+async def test_play_dead(dut):
 
-    # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 10, unit="us")
+    clock = Clock(dut.clk, 40, unit="ns")      # 25 MHz
     cocotb.start_soon(clock.start())
 
-    # Reset
-    dut._log.info("Reset")
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
+    dut.state_sound.value = 0
+
     dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
+    for _ in range(10):
+        await RisingEdge(dut.clk)
+
     dut.rst_n.value = 1
 
-    dut._log.info("Test project behavior")
+    for _ in range(20):
+        await RisingEdge(dut.clk)
 
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
+    # play_dead
+    dut.state_sound.value = 0b0000001
 
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
+    f = open("pwm.txt", "w")
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
+    # Record about 6 seconds
+    dut._log.info("Starting recording")
 
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+    for i in range(150_000_000):
+        if i % 25_000_000 == 0:
+            dut._log.info(f"Recorded {i} samples")
+        await RisingEdge(dut.clk)
+        f.write(f"{int(dut.uio_out.value[7])}\n")
+
+    dut._log.info("Finished recording")
+
+    f.close()
