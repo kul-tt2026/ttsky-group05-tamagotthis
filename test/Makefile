@@ -6,7 +6,7 @@ SIM             ?= icarus
 FST             ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG   ?= verilog
 SRC_DIR          = $(PWD)/../src
-PROJECT_SOURCES  = audio.v play_note.v
+PROJECT_SOURCES  = audio.v play_note.v game_controller.v main_controller.v timer.v clock_divider.v settings_manager.v
 
 ifneq ($(GATES),yes)
 
@@ -31,13 +31,13 @@ VERILOG_SOURCES += $(PDK_PATH)/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
 endif
-
 # Include the testbench sources:
-VERILOG_SOURCES += $(PWD)/tb_audio.v
-TOPLEVEL         = tb_audio
+VERILOG_SOURCES += $(PWD)/tb_audio_all.v
+TOPLEVEL ?= tb_audio_all
+COCOTB_TEST_MODULES ?= combined_tests
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test_audio
+COCOTB_TEST_MODULES = test
 
 # Include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
@@ -46,4 +46,3 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 .PHONY: clean
 clean::
 	rm -rf sim_build/ __pycache__/ results.xml tb.fst
-
