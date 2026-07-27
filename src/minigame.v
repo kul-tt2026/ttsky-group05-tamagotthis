@@ -19,8 +19,11 @@ module minigame #(
     input reg [9:0] cat_pos_y,          // The y-position of the cat.
     output reg [9:0] fish_pos_x,        // The x-position of the fish.
     output reg [9:0] fish_pos_y,        // The y-position of the fish.
-    output fish_caught                  // Signals that a fish has been caught.
+    output reg fish_caught              // Signals that a fish has been caught.
 );
+
+// note: changing fish_caught from a wire to a reg causes a clockcycle of delay (cat catches fish in cycle x, fish_caught is high in cycle x+1)
+// + need fish_caught would be high for two cycles, forced it to go down after one cycle
 
 // note: is_eating is unused in the current implementation
 
@@ -29,7 +32,7 @@ localparam MAX_X_FISH = SCREEN_WIDTH - FISH_WIDTH - 1;
 
 localparam MIN_Y = 0;
 localparam MAX_Y_FISH = SCREEN_HEIGHT - FISH_HEIGHT - 1;
-
+                            
 reg [9:0] next_x, next_y;                                                           // always contain a valid next x and y position
 reg [9:0] last_valid_x, last_valid_y;                                               // keep the most recent valid candidate values
 wire [9:0] x, y;                                                                    // x and y coming out of lsfr, need to check if they're valid
@@ -40,18 +43,20 @@ wire [31:0] seed = 32'h8000_0001;                                               
 lfsr32 #(10,1) random_gen(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(x), .s2(y));   // helper module to get pseudorandom x and y coordinates
 
 
+
 /* verilator lint_off UNSIGNED */                                                   // turn off warning that says MIN_X <= x is always true since it's *currently* set to 0 and x is unsigned (so positive)
 assign valid_x = (MIN_X <= x) && (x <= MAX_X_FISH);
 assign valid_y = (MIN_Y <= y) && (y <= MAX_Y_FISH);
 /* verilator lint_on UNSIGNED */                                                    // turn the warning back on
 
 
-assign fish_caught = (cat_pos_x <= fish_pos_x) && (fish_pos_x <= cat_pos_x + (CAT_WIDTH - FISH_WIDTH))
-                        && (cat_pos_y <= fish_pos_y) && (fish_pos_y <= cat_pos_y + (CAT_HEIGHT - FISH_HEIGHT));
+// assign fish_caught = (cat_pos_x <= fish_pos_x) && (fish_pos_x <= cat_pos_x + (CAT_WIDTH - FISH_WIDTH))
+//                        && (cat_pos_y <= fish_pos_y) && (fish_pos_y <= cat_pos_y + (CAT_HEIGHT - FISH_HEIGHT));
 
 assign no_overlap_fish = ( (x + FISH_WIDTH + BUFFER_DISTANCE <= fish_pos_x ) || (x >= fish_pos_x + FISH_WIDTH + BUFFER_DISTANCE) )              // constraints on x
                             && ( (y + FISH_HEIGHT + BUFFER_DISTANCE <= fish_pos_y ) || (y >= fish_pos_y + FISH_HEIGHT + BUFFER_DISTANCE) );     // constraints on y
 // note: overflow shouldn't be a problem since we use 10 bit regs that can handle values up to 1023, while the valid positions are < 640
+
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -60,7 +65,12 @@ always @(posedge clk or negedge rst_n) begin
         fish_pos_y <= DEFAULT_Y;
         last_valid_x <= DEFAULT_X;
         last_valid_y <= DEFAULT_Y;
+        fish_caught <= 0;
     end else begin
+        fish_caught <= (cat_pos_x <= fish_pos_x) && (fish_pos_x <= cat_pos_x + (CAT_WIDTH - FISH_WIDTH))
+                        && (cat_pos_y <= fish_pos_y) && (fish_pos_y <= cat_pos_y + (CAT_HEIGHT - FISH_HEIGHT));
+        
+        // if (fish_caught) fish_caught <= 0;                  // quick fix to make fish_caught only high for one cycle, did not consider any edge cases -- my third test also fails because of this...
         if (fish_caught) begin
             fish_pos_x <= next_x;
             fish_pos_y <= next_y;
@@ -86,4 +96,6 @@ always @(*) begin
 end
 
 endmodule
+
+
 
