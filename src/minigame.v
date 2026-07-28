@@ -33,25 +33,43 @@ localparam MAX_X_FISH = SCREEN_WIDTH - FISH_WIDTH - 1;
 localparam MIN_Y = 0;
 localparam MAX_Y_FISH = SCREEN_HEIGHT - FISH_HEIGHT - 1;
                             
-reg [9:0] next_x, next_y;                                                           // always contain a valid next x and y position
-reg [9:0] last_valid_x, last_valid_y;                                               // keep the most recent valid candidate values
-wire [9:0] x, y;                                                                    // x and y coming out of lsfr, need to check if they're valid
-wire no_overlap_fish;                                                               // tests whether there's no overlap and a buffer distance between the fish's current position and the next proposed position 
-wire valid_x, valid_y;                                                              // signals whether the x / y from the lfsr are valid
+reg [9:0] next_x, next_y;                                                               // always contain a valid next x and y position
+reg [9:0] last_valid_x, last_valid_y;                                                   // keep the most recent valid candidate values
+wire [9:0] x, y;                                                                        // x and y coming out of lsfr, need to check if they're valid
+wire no_overlap_fish;                                                                   // tests whether there's no overlap and a buffer distance between the fish's current position and the next proposed position 
+wire valid_x, valid_y;                                                                  // signals whether the x / y from the lfsr are valid
+wire fish_caught_now;                                                                   // signals whether a fish was caught this clockcycle
 
-wire [31:0] seed = 32'h8000_0001;                                                   // the starting seed doesn't really matter, as long as it's not all zeros
-lfsr32 #(10,1) random_gen(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(x), .s2(y));   // helper module to get pseudorandom x and y coordinates
+// lfsr is a helper module to get pseudorandom x and y coordinates
+wire [31:0] seed = 32'h8000_0001;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
+
+// x: 0 --> MAX_X_FISH (bv. 640 - 32 - 1 = 607) --> neem 10 bits
+wire [8:0] x1, x2_full;
+wire [6:0] x2 = x2_full[6:0];
+lfsr32 #(9,1) random_x(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(x1), .s2(x2_full));
+assign x = {1'b0, x1} + {3'b0, x2} >= MAX_X_FISH ? MAX_X_FISH : {1'b0, x1} + {3'b0, x2}; 
+// also need to check lower bound if min_x_fish != 0
+
+// y: 0 --> MAX_Y_FISH (bv. 480 - 32 - 1 = 447) --> 9 bits maar 10 maken voor consistentie
+wire [12:0] y14_full, y23_full;
+wire [7:0] y1 = y14_full[12:5];
+wire [6:0] y2 = y23_full[12:6];
+wire [5:0] y3 = y23_full[5:0];
+wire [4:0] y4 = y14_full[4:0];
+lfsr32 #(13,1) random_y(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(y14_full), .s2(y23_full));
+assign y = {2'b0, y1} + {3'b0, y2} + {4'b0, y3} + {5'b0, y4} >= MAX_X_FISH ? MAX_X_FISH : {2'b0, y1} + {3'b0, y2} + {4'b0, y3} + {5'b0, y4};
 
 
-
+// note: door de verbetering van het gebruik van de lfsr zijn valid_x en valid_y niet meer nodig, tenzij MIN_X en MIN_Y veranderd worden naar iets != 0
 /* verilator lint_off UNSIGNED */                                                   // turn off warning that says MIN_X <= x is always true since it's *currently* set to 0 and x is unsigned (so positive)
 assign valid_x = (MIN_X <= x) && (x <= MAX_X_FISH);
 assign valid_y = (MIN_Y <= y) && (y <= MAX_Y_FISH);
 /* verilator lint_on UNSIGNED */                                                    // turn the warning back on
 
 
-// assign fish_caught = (cat_pos_x <= fish_pos_x) && (fish_pos_x <= cat_pos_x + (CAT_WIDTH - FISH_WIDTH))
-//                        && (cat_pos_y <= fish_pos_y) && (fish_pos_y <= cat_pos_y + (CAT_HEIGHT - FISH_HEIGHT));
+// fish is caught when it overlaps completely with the cat
+assign fish_caught_now = (cat_pos_x <= fish_pos_x) && (fish_pos_x <= cat_pos_x + (CAT_WIDTH - FISH_WIDTH))
+                       && (cat_pos_y <= fish_pos_y) && (fish_pos_y <= cat_pos_y + (CAT_HEIGHT - FISH_HEIGHT));
 
 assign no_overlap_fish = ( (x + FISH_WIDTH + BUFFER_DISTANCE <= fish_pos_x ) || (x >= fish_pos_x + FISH_WIDTH + BUFFER_DISTANCE) )              // constraints on x
                             && ( (y + FISH_HEIGHT + BUFFER_DISTANCE <= fish_pos_y ) || (y >= fish_pos_y + FISH_HEIGHT + BUFFER_DISTANCE) );     // constraints on y
@@ -66,12 +84,11 @@ always @(posedge clk or negedge rst_n) begin
         last_valid_x <= DEFAULT_X;
         last_valid_y <= DEFAULT_Y;
         fish_caught <= 0;
-    end else begin
-        fish_caught <= (cat_pos_x <= fish_pos_x) && (fish_pos_x <= cat_pos_x + (CAT_WIDTH - FISH_WIDTH))
-                        && (cat_pos_y <= fish_pos_y) && (fish_pos_y <= cat_pos_y + (CAT_HEIGHT - FISH_HEIGHT));
         
-        // if (fish_caught) fish_caught <= 0;                  // quick fix to make fish_caught only high for one cycle, did not consider any edge cases -- my third test also fails because of this...
-        if (fish_caught) begin
+    end else begin
+        fish_caught <= fish_caught_now;
+        
+        if (fish_caught_now) begin
             fish_pos_x <= next_x;
             fish_pos_y <= next_y;
         end
