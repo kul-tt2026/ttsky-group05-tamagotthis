@@ -216,6 +216,7 @@ module tb_minigame ();
 
   // Wire up the inputs and outputs:
   reg clk;
+  reg clk2;
   reg rst_n;
   reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
   reg is_eating, fish_caught;
@@ -224,6 +225,7 @@ module tb_minigame ();
   minigame minigame_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .clk2(clk2),
       .is_eating(is_eating),
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
