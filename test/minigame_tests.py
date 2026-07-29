@@ -25,9 +25,13 @@ async def reset(dut):
 Performs a standard test setup
 """
 async def test_setup(dut):
-   # Set the clock period to 10 us (100 kHz)
-    clock = Clock(dut.clk, 10, unit="us")
+    # Set the clock period to 1 ms (1 kHz)         
+    clock = Clock(dut.clk, 1, unit="ms")
     cocotb.start_soon(clock.start())
+
+    # Set faster lfsr clock period to 10 us (100 kHz)
+    clock2 = Clock(dut.clk2, 1, unit="us")
+    cocotb.start_soon(clock2.start()) 	
 
     dut.cat_pos_x.value = 0
     dut.cat_pos_y.value = 0
@@ -244,7 +248,9 @@ async def test_next_position(dut):
 
     # After reset: fish position is (120,300)
 
-    await ClockCycles(dut.clk, 50)  # wait some time, 50 * 10 us = 500 us = 0.5 seconds
+    await ClockCycles(dut.clk2, 25)         # give the lfsr some time to produce random values
+    
+    await RisingEdge(dut.clk)
 
     # catch the fish
     dut.cat_pos_x.value = 115
