@@ -94,13 +94,27 @@ async def simulation(dut):
         dut.X.value = is_pressed('x')
         dut.Y.value = is_pressed('y')
         
-        dut.fish_caught.value = is_pressed('f')
+        # dut.fish_caught.value = is_pressed('f')
         dut.rst_n.value = not is_pressed('r')
 
         # Outputs.
         stats = dict()
-        stats["pos_x"] = str(dut.cat_pos_x.value)
-        stats["pos_y"] = str(dut.cat_pos_y.value)
+        try:
+            stats["pos_x"] = str(int(dut.cat_pos_x.value))
+        except:
+            stats["pos_x"] = "INVALID"
+        try:
+            stats["pos_y"] = str(int(dut.cat_pos_y.value))
+        except:
+            stats["pos_y"] = "INVALID"
+        try:
+            stats["fish_x"] = str(int(dut.fish_pos_x.value))
+        except:
+            stats["fish_y"] = "INVALID"
+        try:
+            stats["fish_y"] = str(int(dut.fish_pos_y.value))
+        except:
+            stats["pos_x"] = "INVALID"
         stats["lives"] = str(dut.lives_left.value)
         stats["battery"] = str(dut.battery_left.value)
         stats["state"] = "BANG" if dut.show_bang.value == 1 else \

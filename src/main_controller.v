@@ -34,7 +34,7 @@ module main_controller (
     // Number of pixels the cat moves over per button press in the eating state.
     parameter EAT_STEP_SIZE = 1;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move again unless button is pressed again'.
-    parameter EAT_STEP_INTERVAL = 10;
+    parameter EAT_STEP_INTERVAL = 2;
     // Number of pixels the cat moves over per button press in the eating state.
     parameter DEFAULT_STEP_SIZE = 1;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move'.
@@ -52,9 +52,9 @@ module main_controller (
     
     // min and max x and y positions for the cat.
     parameter MIN_POS_X = 0;
-    parameter MAX_POS_X = 100;
+    parameter MAX_POS_X = 640-32;
     parameter MIN_POS_Y = 0;
-    parameter MAX_POS_Y = 200;
+    parameter MAX_POS_Y = 480-32;
     // The location at which the cat spawns.
     parameter START_POS_X = 50;
     parameter START_POS_Y = 100;
