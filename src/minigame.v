@@ -13,7 +13,7 @@ module minigame #(
     parameter DEFAULT_Y = 300,          // Default y position of the fish
     parameter BUFFER_DISTANCE = 50      // Determines how the fish's next position has to be from the current position
 )(
-    input rst_n, clk,                   // Global active-low reset and clock.
+    input rst_n, clk, clk2,         // Global active-low reset and clock  + faster clock for lfsr (clk2)
     input is_eating,                    // Signals that the food minigame is currently active.
     input reg [9:0] cat_pos_x,          // The x-position of the cat.
     input reg [9:0] cat_pos_y,          // The y-position of the cat.
