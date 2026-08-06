@@ -12,60 +12,77 @@ To use:
 - Add a 3-bit (or more) "rgb" output to the top level
 */
 
-module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
 
-  input clk;
-  input reset;
-  output reg hsync, vsync;
-  output display_on;
-  output reg [9:0] hpos;
-  output reg [9:0] vpos;
+module hvsync_generator (
+    input wire clk,
+    input wire reset,
+    output reg hsync,
+    output reg vsync,
+    output wire display_on,
+    output reg [9:0] hpos,
+    output reg [9:0] vpos
+);
 
-  // declarations for TV-simulator sync parameters
-  // horizontal constants
-  parameter H_DISPLAY       = 640; // horizontal display width
-  parameter H_BACK          =  48; // horizontal left border (back porch)
-  parameter H_FRONT         =  16; // horizontal right border (front porch)
-  parameter H_SYNC          =  96; // horizontal sync width
-  // vertical constants
-  parameter V_DISPLAY       = 480; // vertical display height
-  parameter V_TOP           =  33; // vertical top border
-  parameter V_BOTTOM        =  10; // vertical bottom border
-  parameter V_SYNC          =   2; // vertical sync # lines
-  // derived constants
-  parameter H_SYNC_START    = H_DISPLAY + H_FRONT;
-  parameter H_SYNC_END      = H_DISPLAY + H_FRONT + H_SYNC - 1;
-  parameter H_MAX           = H_DISPLAY + H_BACK + H_FRONT + H_SYNC - 1;
-  parameter V_SYNC_START    = V_DISPLAY + V_BOTTOM;
-  parameter V_SYNC_END      = V_DISPLAY + V_BOTTOM + V_SYNC - 1;
-  parameter V_MAX           = V_DISPLAY + V_TOP + V_BOTTOM + V_SYNC - 1;
-
-  wire hmaxxed = (hpos == H_MAX) || reset;	// set when hpos is maximum
-  wire vmaxxed = (vpos == V_MAX) || reset;	// set when vpos is maximum
+  // Horizontal constants (640x480 @ 60Hz standard)
+  parameter H_DISPLAY    = 640;
+  parameter H_FRONT      = 16;
+  parameter H_SYNC       = 96;
+  parameter H_BACK       = 48;
   
-  // horizontal position counter
-  always @(posedge clk)
-  begin
-    hsync <= ~(hpos>=H_SYNC_START && hpos<=H_SYNC_END);
-    if(hmaxxed)
-      hpos <= 0;
-    else
-      hpos <= hpos + 1;
-  end
+  // Vertical constants
+  parameter V_DISPLAY    = 480;
+  parameter V_BOTTOM     = 10;
+  parameter V_SYNC       = 2;
+  parameter V_TOP        = 33;
 
-  // vertical position counter
-  always @(posedge clk)
-  begin
-    vsync <= ~(vpos>=V_SYNC_START && vpos<=V_SYNC_END);
-    if(hmaxxed)
-      if (vmaxxed)
-        vpos <= 0;
+  // Derived constants
+  parameter H_SYNC_START = H_DISPLAY + H_FRONT;                 // 656
+  parameter H_SYNC_END   = H_DISPLAY + H_FRONT + H_SYNC - 1;    // 751
+  parameter H_MAX        = H_DISPLAY + H_FRONT + H_SYNC + H_BACK - 1; // 799
+
+  parameter V_SYNC_START = V_DISPLAY + V_BOTTOM;                // 490
+  parameter V_SYNC_END   = V_DISPLAY + V_BOTTOM + V_SYNC - 1;   // 491
+  parameter V_MAX        = V_DISPLAY + V_BOTTOM + V_SYNC + V_TOP - 1; // 524
+
+  wire hmaxxed = (hpos == H_MAX);
+  wire vmaxxed = (vpos == V_MAX);
+
+  // Horizontal position counter & sync
+  always @(posedge clk) begin
+    if (reset) begin
+      hpos  <= 10'd0;
+      hsync <= 1'b1;
+    end else begin
+      if (hmaxxed)
+        hpos <= 10'd0;
       else
-        vpos <= vpos + 1;
+        hpos <= hpos + 1'b1;
+
+      // Active-low sync pulse during sync interval
+      hsync <= ~((hpos >= H_SYNC_START) && (hpos <= H_SYNC_END));
+    end
   end
-  
-  // display_on is set when beam is in "safe" visible frame
-  assign display_on = (hpos<H_DISPLAY) && (vpos<V_DISPLAY);
+
+  // Vertical position counter & sync
+  always @(posedge clk) begin
+    if (reset) begin
+      vpos  <= 10'd0;
+      vsync <= 1'b1;
+    end else begin
+      if (hmaxxed) begin
+        if (vmaxxed)
+          vpos <= 10'd0;
+        else
+          vpos <= vpos + 1'b1;
+      end
+
+      // Active-low sync pulse during sync interval
+      vsync <= ~((vpos >= V_SYNC_START) && (vpos <= V_SYNC_END));
+    end
+  end
+
+  // Active display area indicator
+  assign display_on = (hpos < H_DISPLAY) && (vpos < V_DISPLAY);
 
 endmodule
 
