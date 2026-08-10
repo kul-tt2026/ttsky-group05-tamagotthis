@@ -6,7 +6,7 @@ SIM             ?= icarus
 FST             ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG   ?= verilog
 SRC_DIR          = $(PWD)/../src
-PROJECT_SOURCES  = project.v game_controller.v main_controller.v timer.v clock_divider.v settings_manager.v
+PROJECT_SOURCES  = audio.v play_note.v
 
 ifneq ($(GATES),yes)
 
@@ -32,9 +32,9 @@ VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
 endif
 # Include the testbench sources:
-VERILOG_SOURCES += $(PWD)/tb_all.v
-TOPLEVEL ?= tb_all
-COCOTB_TEST_MODULES ?= combined_tests
+VERILOG_SOURCES += $(PWD)/tb_audio.v
+TOPLEVEL ?= tb_audio
+COCOTB_TEST_MODULES ?= test_audio
 
 
 # Include cocotb's make rules to take care of the simulator setup

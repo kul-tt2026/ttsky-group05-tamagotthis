@@ -1,67 +1,169 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-/* This testbench just instantiates the module and makes some convenient wires
-   that can be driven / tested by the cocotb test.py.
-*/
-module tb_audio ();
+module tb_audio;
 
-  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
-  initial begin
-    $dumpfile("tb_audio.fst");
-    $dumpvars(0, tb_audio);
-    #1;
-  end
+    // =========================================================
+    // CLOCK / RESET
+    // =========================================================
 
-  // Wire up the inputs and outputs:
-  reg clk;
-  reg rst_n;
-  reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  reg [6:0] state_sound;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
-`ifdef GL_TEST
-  wire VPWR = 1'b1;
-  wire VGND = 1'b0;
-`endif
+    reg clk;
+    reg rst_n;
 
-  initial clk = 0;
-  always  #20 clk = ~clk;
+    // =========================================================
+    // SIX SOUND INPUTS
+    // =========================================================
 
-  initial begin
-    rst_n = 0;
-    #200;
-    rst_n = 1;
-  end
+    reg fish_caught;
+    reg play_bang;
+    reg play_default;
+    reg play_sleeping;
+    reg play_dead;
+    reg battery_almost_empty;
 
-  initial begin
-    ena = 1;
-    ui_in = 0;
-    uio_in = 0;
-    state_sound = 0;
-  end
+    // =========================================================
+    // AUDIO OUTPUT
+    // =========================================================
 
-  // Replace tt_um_example with your module name:
-  audio dut (
+    wire audio_out;
 
-      // Include power ports for the Gate Level test:
-`ifdef GL_TEST
-      .VPWR(VPWR),
-      .VGND(VGND),
-`endif
+    // =========================================================
+    // PWM MONITOR
+    //
+    // One sample is produced every 256 clock cycles.
+    //
+    // pwm_high_count = number of HIGH clocks during one PWM
+    // period.
+    //
+    // pwm_sample_valid pulses HIGH for one clock when a complete
+    // PWM period has been measured.
+    // =========================================================
 
-      .ui_in  (ui_in),    // Dedicated inputs
-      .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (uio_in),   // IOs: Input path
-      .uio_out(uio_out),  // IOs: Output path
-      .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
-      .ena    (ena),      // enable - goes high when design is selected
-      .clk    (clk),      // clock
-      .rst_n  (rst_n),     // not reset
-      .state_sound  (state_sound)
-  );
+    reg [7:0] pwm_clock_count;
+    reg [8:0] pwm_high_count;
+    reg       pwm_sample_valid;
+
+    // =========================================================
+    // CLOCK
+    // =========================================================
+
+    initial clk = 0;
+
+    always #20 clk = ~clk;   // 25 MHz
+
+    // =========================================================
+    // RESET
+    // =========================================================
+
+    initial begin
+        rst_n = 0;
+        #200;
+        rst_n = 1;
+    end
+
+    // =========================================================
+    // INITIAL INPUT VALUES
+    // =========================================================
+
+    initial begin
+        fish_caught          = 0;
+        play_bang            = 0;
+        play_default         = 0;
+        play_sleeping        = 0;
+        play_dead            = 0;
+        battery_almost_empty = 0;
+    end
+
+    // =========================================================
+    // DUT
+    //
+    // This assumes your audio module has these ports:
+    //
+    // input clk
+    // input rst_n
+    // input fish_caught
+    // input play_bang
+    // input play_default
+    // input play_sleeping
+    // input play_dead
+    // input battery_almost_empty
+    // output audio_out
+    // =========================================================
+
+    audio dut (
+        .clk                  (clk),
+        .rst_n                (rst_n),
+
+        .fish_caught          (fish_caught),
+        .play_bang            (play_bang),
+        .play_default         (play_default),
+        .play_sleeping        (play_sleeping),
+        .play_dead            (play_dead),
+        .battery_almost_empty (battery_almost_empty),
+
+        .audio_out            (audio_out)
+    );
+
+    // =========================================================
+    // PWM DUTY-CYCLE MEASUREMENT
+    // =========================================================
+
+    always @(posedge clk) begin
+
+        if (!rst_n) begin
+
+            pwm_clock_count <= 0;
+            pwm_high_count <= 0;
+            pwm_sample_valid <= 0;
+
+        end else begin
+
+            pwm_sample_valid <= 0;
+
+            // Count HIGH cycles in the current PWM period
+            if (audio_out)
+                pwm_high_count <= pwm_high_count + 1;
+
+            // After 256 clocks, publish one sample
+            if (pwm_clock_count == 8'd255) begin
+
+                pwm_sample_valid <= 1;
+
+                // Start next PWM measurement period
+                pwm_clock_count <= 0;
+                pwm_high_count <= 0;
+
+            end else begin
+
+                pwm_clock_count <= pwm_clock_count + 1;
+
+            end
+        end
+    end
+
+    // =========================================================
+    // OPTIONAL WAVEFORM DUMP
+    //
+    // Comment this entire block out if simulation is still slow.
+    // =========================================================
+
+    initial begin
+        $dumpfile("tb_audio.fst");
+
+        $dumpvars(0, tb_audio.clk);
+        $dumpvars(0, tb_audio.rst_n);
+
+        $dumpvars(0, tb_audio.audio_out);
+
+        $dumpvars(0, tb_audio.fish_caught);
+        $dumpvars(0, tb_audio.play_bang);
+        $dumpvars(0, tb_audio.play_default);
+        $dumpvars(0, tb_audio.play_sleeping);
+        $dumpvars(0, tb_audio.play_dead);
+        $dumpvars(0, tb_audio.battery_almost_empty);
+
+        $dumpvars(0, tb_audio.pwm_high_count);
+        $dumpvars(0, tb_audio.pwm_sample_valid);
+    end
 
 endmodule
