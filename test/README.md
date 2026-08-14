@@ -16,9 +16,13 @@ In order to run the tests, first, make sure the current working directory is the
 ```sh
 cd test
 ```
-To run the tests of the entire project:
+To run only the tests of the final product (all modules tested together, rather than individually):
 ```sh
 make
+```
+To run all the tests of the entire project:
+```sh
+make all_tests
 ```
 To test a single module:
 ```sh
