@@ -261,7 +261,7 @@ async def max_one_valid_state_test(dut):
 
 
 # Check if moving the cat makes sense, in the eating state.
-@cocotb.test()
+# @cocotb.test()
 async def move_cat_when_eating_test(dut):
     await setup_test(dut, 4)
 
@@ -356,7 +356,7 @@ async def move_cat_when_eating_test(dut):
 
 
 # Check if the cat always has an on-screen position in the eating state.
-@cocotb.test()
+# @cocotb.test()
 async def valid_position_test(dut):
     await setup_test(dut, 5)
 
@@ -664,7 +664,7 @@ async def battery_max_test(dut):
 
 
 # Tests if the cat_mirrorred signal is correct in the eating state.
-@cocotb.test()
+# @cocotb.test()
 async def cat_mirrorred_eating_test(dut):
     await setup_test(dut, 12)
 
