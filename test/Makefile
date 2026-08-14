@@ -62,7 +62,7 @@ all:
 			echo "========================================"; \
 			echo "Running $$toplevel / $$test_module"; \
 			echo "========================================"; \
-			$(MAKE) --no-print-directory sim \
+			$(MAKE) clean --no-print-directory sim \
 				TOPLEVEL=$$toplevel \
 				COCOTB_TEST_MODULES=$$test_module || exit $$?; \
 		done; \
