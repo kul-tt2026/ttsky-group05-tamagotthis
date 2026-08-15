@@ -149,25 +149,25 @@ end
     // Comment this entire block out if simulation is still slow.
     // =========================================================
 
-    initial begin
-    $dumpfile("tb_audio.fst");
+//    initial begin
+//    $dumpfile("tb_audio.fst");
 
-    $dumpvars(0, tb_audio.clk);
-    $dumpvars(0, tb_audio.rst_n);
+//    $dumpvars(0, tb_audio.clk);
+//    $dumpvars(0, tb_audio.rst_n);
 
-    $dumpvars(0, tb_audio.audio_out);
+//    $dumpvars(0, tb_audio.audio_out);
 
-    $dumpvars(0, tb_audio.fish_caught);
-    $dumpvars(0, tb_audio.play_bang);
-    $dumpvars(0, tb_audio.play_default);
-    $dumpvars(0, tb_audio.play_sleeping);
-    $dumpvars(0, tb_audio.play_dead);
-    $dumpvars(0, tb_audio.battery_almost_empty);
+//    $dumpvars(0, tb_audio.fish_caught);
+//    $dumpvars(0, tb_audio.play_bang);
+//    $dumpvars(0, tb_audio.play_default);
+//    $dumpvars(0, tb_audio.play_sleeping);
+//    $dumpvars(0, tb_audio.play_dead);
+//    $dumpvars(0, tb_audio.battery_almost_empty);
 
-    $dumpvars(0, tb_audio.pwm_clock_count);
-    $dumpvars(0, tb_audio.pwm_high_count);
-    $dumpvars(0, tb_audio.sample_valid);
-    $dumpvars(0, tb_audio.audio_sample);
-end
+//    $dumpvars(0, tb_audio.pwm_clock_count);
+//    $dumpvars(0, tb_audio.pwm_high_count);
+//    $dumpvars(0, tb_audio.sample_valid);
+//    $dumpvars(0, tb_audio.audio_sample);
+//end
 
 endmodule

@@ -188,7 +188,7 @@ async def test_all_sounds(dut):
     # Wait for the Verilog reset sequence.
     # --------------------------------------------------------
 
-    await Timer(1, units="ns")
+    await Timer(1, unit="ns")
 
     while int(dut.rst_n.value) == 0:
         await RisingEdge(dut.clk)
