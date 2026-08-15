@@ -41,7 +41,9 @@ module tb_audio;
 
     reg [7:0] pwm_clock_count;
     reg [8:0] pwm_high_count;
-    reg       pwm_sample_valid;
+
+    reg       sample_valid;
+    reg [7:0] audio_sample;
 
     // =========================================================
     // CLOCK
@@ -110,36 +112,36 @@ module tb_audio;
 
     always @(posedge clk) begin
 
-        if (!rst_n) begin
+    if (!rst_n) begin
+        pwm_clock_count <= 0;
+        pwm_high_count  <= 0;
+        sample_valid    <= 0;
+        audio_sample    <= 0;
 
+    end else begin
+
+        sample_valid <= 0;
+
+        if (pwm_clock_count == 8'd255) begin
+
+            // Publish the completed PWM measurement.
+            audio_sample <= pwm_high_count[7:0];
+            sample_valid <= 1;
+
+            // Start a new measurement.
             pwm_clock_count <= 0;
-            pwm_high_count <= 0;
-            pwm_sample_valid <= 0;
+            pwm_high_count  <= 0;
 
         end else begin
 
-            pwm_sample_valid <= 0;
+            pwm_clock_count <= pwm_clock_count + 1;
 
-            // Count HIGH cycles in the current PWM period
             if (audio_out)
                 pwm_high_count <= pwm_high_count + 1;
 
-            // After 256 clocks, publish one sample
-            if (pwm_clock_count == 8'd255) begin
-
-                pwm_sample_valid <= 1;
-
-                // Start next PWM measurement period
-                pwm_clock_count <= 0;
-                pwm_high_count <= 0;
-
-            end else begin
-
-                pwm_clock_count <= pwm_clock_count + 1;
-
-            end
         end
     end
+end
 
     // =========================================================
     // OPTIONAL WAVEFORM DUMP
@@ -148,22 +150,24 @@ module tb_audio;
     // =========================================================
 
     initial begin
-        $dumpfile("tb_audio.fst");
+    $dumpfile("tb_audio.fst");
 
-        $dumpvars(0, tb_audio.clk);
-        $dumpvars(0, tb_audio.rst_n);
+    $dumpvars(0, tb_audio.clk);
+    $dumpvars(0, tb_audio.rst_n);
 
-        $dumpvars(0, tb_audio.audio_out);
+    $dumpvars(0, tb_audio.audio_out);
 
-        $dumpvars(0, tb_audio.fish_caught);
-        $dumpvars(0, tb_audio.play_bang);
-        $dumpvars(0, tb_audio.play_default);
-        $dumpvars(0, tb_audio.play_sleeping);
-        $dumpvars(0, tb_audio.play_dead);
-        $dumpvars(0, tb_audio.battery_almost_empty);
+    $dumpvars(0, tb_audio.fish_caught);
+    $dumpvars(0, tb_audio.play_bang);
+    $dumpvars(0, tb_audio.play_default);
+    $dumpvars(0, tb_audio.play_sleeping);
+    $dumpvars(0, tb_audio.play_dead);
+    $dumpvars(0, tb_audio.battery_almost_empty);
 
-        $dumpvars(0, tb_audio.pwm_high_count);
-        $dumpvars(0, tb_audio.pwm_sample_valid);
-    end
+    $dumpvars(0, tb_audio.pwm_clock_count);
+    $dumpvars(0, tb_audio.pwm_high_count);
+    $dumpvars(0, tb_audio.sample_valid);
+    $dumpvars(0, tb_audio.audio_sample);
+end
 
 endmodule

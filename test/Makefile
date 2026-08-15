@@ -8,8 +8,6 @@ TOPLEVEL_LANG   ?= verilog
 SRC_DIR          = $(PWD)/../src
 PROJECT_SOURCES  = audio.v play_note.v
 
-COMPILE_ARGS    += --timing
-
 ifneq ($(GATES),yes)
 
 # RTL simulation:
@@ -45,4 +43,4 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 # Extend cocotb's clean target to also remove build artifacts
 .PHONY: clean
 clean::
-	rm -rf sim_build/ __pycache__/ results.xml tb.fst
+	rm -rf sim_build/ __pycache__/ results.xml tb_audio.fst all_sounds.wav
