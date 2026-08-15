@@ -8,6 +8,8 @@ TOPLEVEL_LANG   ?= verilog
 SRC_DIR          = $(PWD)/../src
 PROJECT_SOURCES  = audio.v play_note.v
 
+COMPILE_ARGS    += --timing
+
 ifneq ($(GATES),yes)
 
 # RTL simulation:

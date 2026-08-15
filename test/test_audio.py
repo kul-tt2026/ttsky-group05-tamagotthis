@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, Timer
 import numpy as np
 from scipy.io.wavfile import write
 
@@ -187,6 +187,8 @@ async def test_all_sounds(dut):
     # --------------------------------------------------------
     # Wait for the Verilog reset sequence.
     # --------------------------------------------------------
+
+    await Timer(1, units="ns")
 
     while int(dut.rst_n.value) == 0:
         await RisingEdge(dut.clk)
