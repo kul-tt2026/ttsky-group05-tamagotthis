@@ -34,8 +34,9 @@ module tt_um_tamagotchi (
 
   wire start, select, l, r, is_present;
  
-  wire deplete_battery;
-  wire fish_caught;
+  // for testing purposes -- won't be used in the final version
+  wire deplete_battery = ui_in[7];
+  wire fish_caught = ui_in[3];
 
   wire [9:0] cat_pos_x, cat_pos_y;
   wire [3:0] lives_left, battery_left;
