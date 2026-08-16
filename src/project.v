@@ -34,8 +34,8 @@ module tt_um_tamagotchi (
 
   wire start, select, l, r, is_present;
  
-  wire deplete_battery = ui_in[7];
-  wire fish_caught = ui_in[3];
+  wire deplete_battery;
+  wire fish_caught;
 
   wire [9:0] cat_pos_x, cat_pos_y;
   wire [3:0] lives_left, battery_left;
@@ -43,27 +43,13 @@ module tt_um_tamagotchi (
   wire play_bang, play_default, play_dead, play_playing, play_sleeping;
   wire cat_mirrored;
 
-  // hvsync generator
-  wire hsync, vsync, display_on;
-  wire [9:0] hpos, vpos;
-
   // vga
   wire [9:0] fish_pos_x, fish_pos_y;
   wire [1:0] R, G, B;
+  wire hsync, vsync;
  
   // audio
   wire audio_out;
-  wire [7:0] uio_out_audio, uio_oe_audio, uo_out_audio;
-
-  // audio v2
-  wire [6:0] state_sound;
-  assign state_sound[0] = play_dead;
-  assign state_sound[1] = battery_almost_empty;
-  assign state_sound[2] = play_sleeping;
-  assign state_sound[3] = fish_caught;
-  assign state_sound[4] = play_bang;
-  assign state_sound[5] = play_default;
-  assign state_sound[6] = play_playing;
 
   // Placeholder fish position until a real fish controller is implemented.
   assign fish_pos_x = 10'd0;
@@ -125,15 +111,6 @@ module tt_um_tamagotchi (
       .cat_mirrored(cat_mirrored)
   );
 
-  // hvsync_generator hvsync(
-  //   .clk(clk),
-  //   .reset(~rst_n),
-  //   .hsync(hsync),
-  //   .vsync(vsync),
-  //   .display_on(display_on),
-  //   .hpos(hpos),
-  //   .vpos(vpos)
-  // );
 
   vga vga(
     .clk(clk),
@@ -154,33 +131,21 @@ module tt_um_tamagotchi (
     .B(B)
   );
 
-  // audio audio(
-  //   .rst_n(rst_n),
-  //   .clk(clk),
-  //   .fish_caught(fish_caught),
-  //   .play_bang(play_bang),
-  //   .play_default(play_default),
-  //   .play_sleeping(play_sleeping),
-  //   .play_playing(play_playing),
-  //   .play_dead(play_dead),
-  //   .battery_almost_empty(battery_almost_empty),
-  //   .audio_out(audio_out)
-  // );
-
   audio audio(
-    .ui_in(ui_in),
-    .uo_out(uo_out_audio),
-    .uio_in(uio_in),
-    .uio_out(uio_out_audio),
-    .uio_oe(uio_oe_audio),
-    .ena(ena),
-    .clk(clk),
     .rst_n(rst_n),
-    .state_sound(state_sound)
+    .clk(clk),
+    .fish_caught(fish_caught),
+    .play_bang(play_bang),
+    .play_default(play_default),
+    .play_sleeping(play_sleeping),
+    // .play_playing(play_playing),               // no playing sound implemented yet
+    .play_dead(play_dead),
+    .battery_almost_empty(battery_almost_empty),
+    .audio_out(audio_out)
   );
  
   // All output pins must be assigned. If not used, assign to 0.
-  // assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
+  // assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]}; -- this caused errors, so it's split up into multiple lines
   assign uo_out[7] = hsync;
   assign uo_out[6] = B[0];
   assign uo_out[5] = G[0];
@@ -190,21 +155,13 @@ module tt_um_tamagotchi (
   assign uo_out[1] = G[1];
   assign uo_out[0] = R[1];
 
-  assign audio_out = uio_out_audio[7];
 
-  // assign uio_out = {7'b0, audio_out};
-  assign uio_out[7:1] = 7'b0;
-  assign uio_out[0] = audio_out;
-  assign uio_oe = 8'b1;
+  assign uio_out[6:0] = 7'b0;
+  assign uio_out[7] = audio_out;              // the audio pmod is designed to use uio_out[7] (or uio_out[7])
+  assign uio_oe = 8'b10000000;                // only uio_out[7] as output
 
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, ui_in[2:0], uio_in, 1'b0};
  
-/*
-  assign uo_out = {gamepad_up, gamepad_down, gamepad_left, gamepad_right, gamepad_a, gamepad_b, gamepad_x, gamepad_y};
-  assign uio_out = 8'b0;
-  // List all unused inputs to prevent warnings
-  wire _unused = &{ena, ui_in[3:0], ui_in[7], uio_in, 1'b0};
-  */
 
 endmodule
