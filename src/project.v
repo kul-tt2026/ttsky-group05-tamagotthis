@@ -32,15 +32,9 @@ module tt_um_tamagotchi (
   wire gamepad_x;
   wire gamepad_y;
 
-  wire start, select, l, r, is_present;
- 
-  // for testing purposes -- won't be used in the final version
-  wire deplete_battery = ui_in[7];
-  wire fish_caught = ui_in[3];
-
   wire [9:0] cat_pos_x, cat_pos_y;
   wire [3:0] lives_left, battery_left;
-  wire battery_almost_empty, is_eating, show_bang, is_dead, is_sleeping, is_playing, is_default_state;
+  wire battery_almost_empty, deplete_battery, fish_caught, is_eating, show_bang, is_dead, is_sleeping, is_playing, is_default_state;
   wire play_bang, play_default, play_dead, play_playing, play_sleeping;
   wire cat_mirrored;
 
@@ -51,10 +45,6 @@ module tt_um_tamagotchi (
  
   // audio
   wire audio_out;
-
-  // Placeholder fish position until a real fish controller is implemented.
-  assign fish_pos_x = 10'd0;
-  assign fish_pos_y = 10'd0;
 
   gamepad_pmod_single gamepad_pmod (
       // Inputs:
@@ -73,12 +63,36 @@ module tt_um_tamagotchi (
       .b(gamepad_b),
       .x(gamepad_x),
       .y(gamepad_y),
-      .start(start),
-      .select(select),
-      .l(l),
-      .r(r),
-      .is_present(is_present)
+      .start(),
+      .select(),
+      .l(),
+      .r(),
+      .is_present()
   );
+
+  wire timing_option; // 0: slow timing, 1: fast timing.
+  wire [35:0] slow_clocks;
+  wire clk_6Hz, clk_timer;
+  
+  clock_divider #(.DIVIDER_MSB(35)) clock_divider(.rst_n(rst_n),
+                                                  .clk(clk),
+                                                  .slow_clocks(slow_clocks));
+
+  assign clk_6Hz = slow_clocks[22];
+  assign clk_timer = timing_option ? slow_clocks[35] : slow_clocks[27];
+  
+  settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
+                                                                             .clk(clk),
+                                                                             .inputs(gamepad_a),
+                                                                             .settings(timing_option));
+
+  timer timer(.rst_n(rst_n),
+              .clk(clk_6Hz),
+              .slow_clk(clk_timer),
+              .is_sleeping(is_sleeping),
+              .is_playing(is_playing),
+              .caught_fish(fish_caught),
+              .deplete_battery(deplete_battery));
  
   main_controller main_controller(
       .rst_n(rst_n),
@@ -112,6 +126,17 @@ module tt_um_tamagotchi (
       .cat_mirrored(cat_mirrored)
   );
 
+  minigame minigame (
+      .rst_n(rst_n),
+      .clk(clk_6Hz),
+      .clk2(clk),
+      .is_eating(is_eating),
+      .cat_pos_x(cat_pos_x),
+      .cat_pos_y(cat_pos_y),
+      .fish_pos_x(fish_pos_x),
+      .fish_pos_y(fish_pos_y),
+      .fish_caught(fish_caught)
+  );
 
   vga vga(
     .clk(clk),
@@ -162,7 +187,5 @@ module tt_um_tamagotchi (
   assign uio_oe = 8'b10000000;                // only uio_out[7] as output
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, ui_in[2:0], uio_in, 1'b0};
- 
-
+  wire _unused = &{ena, ui_in[3:0], ui_in[7], uio_in, 1'b0};
 endmodule
