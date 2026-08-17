@@ -53,17 +53,8 @@ module tt_um_tamagotchi (
  
   // audio
   wire audio_out;
-  wire [7:0] uio_out_audio, uio_oe_audio, uo_out_audio;
+  // wire [7:0] uio_out_audio, uio_oe_audio, uo_out_audio;
 
-  // audio v2
-  wire [6:0] state_sound;
-  assign state_sound[0] = play_dead;
-  assign state_sound[1] = battery_almost_empty;
-  assign state_sound[2] = play_sleeping;
-  assign state_sound[3] = fish_caught;
-  assign state_sound[4] = play_bang;
-  assign state_sound[5] = play_default;
-  assign state_sound[6] = play_playing;
 
   // Placeholder fish position until a real fish controller is implemented.
   assign fish_pos_x = 10'd0;
@@ -168,15 +159,15 @@ module tt_um_tamagotchi (
   // );
 
   audio audio(
-    .ui_in(ui_in),
-    .uo_out(uo_out_audio),
-    .uio_in(uio_in),
-    .uio_out(uio_out_audio),
-    .uio_oe(uio_oe_audio),
-    .ena(ena),
     .clk(clk),
     .rst_n(rst_n),
-    .state_sound(state_sound)
+    .fish_caught(fish_caught),
+    .play_bang(play_bang),
+    .play_default(play_default),
+    .play_sleeping(play_sleeping),
+    .play_dead(play_dead),
+    .battery_almost_empty(battery_almost_empty),
+    .audio_out(audio_out)
   );
  
   // All output pins must be assigned. If not used, assign to 0.
@@ -190,7 +181,7 @@ module tt_um_tamagotchi (
   assign uo_out[1] = G[1];
   assign uo_out[0] = R[1];
 
-  assign audio_out = uio_out_audio[7];
+  // assign audio_out = uio_out_audio[7];
 
   // assign uio_out = {7'b0, audio_out};
   assign uio_out[7:1] = 7'b0;
