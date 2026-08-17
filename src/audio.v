@@ -1,8 +1,8 @@
 `default_nettype none
 
 module audio (
-    input  wire       clk,      // clock
-    input  wire       rst_n,     // reset_n - low to reset           
+    input  wire clk,                    // clock
+    input  wire rst_n,                  // reset_n - low to reset           
     input fish_caught,                  // Signals that a fish has been caught.
     input play_bang,                    // Prompts a bang sound when the cat is spawned.
     input play_default,                 // Prompts a default sound when the cat is in its default state.

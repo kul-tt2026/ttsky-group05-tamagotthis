@@ -34,7 +34,7 @@ module timer (
     reg last_slow_clk;
     
 
-    always @(posedge clk or rst_n) begin // Asynchronous reset.
+    always @(posedge clk or negedge rst_n) begin // Asynchronous reset.
         if (~rst_n) begin
             sleep_clk <= SLEEP_DEPLETION_TIME;
             eat_clk <= EAT_DEPLETION_TIME;

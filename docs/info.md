@@ -15,7 +15,7 @@ The project implements a tamagotchi: a cat is born on startup and is to be kept 
 - If no lives remain, the tamagotchi reboots completely.
 
 Interacting with the tamagotchi is done using a gamepad:
-- The X, Y A and B buttons are used to transition to the 'play', 'sleep', 'eat' and 'default' state respectively.
+- The X, Y, A and B buttons are used to transition to the 'play', 'sleep', 'eat' and 'default' state respectively.
 - The 'left', 'right', 'up' and 'down' keys can be used in the 'eat' state to catch fish.
 Feedback is given to the user through a VGA screen and an audio output.
 
