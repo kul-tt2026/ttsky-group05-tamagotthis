@@ -1,72 +1,62 @@
-// /*
-//  * The audio module handles the audio output for the Tamagotchi.
-//  * It generates sounds based on signals it receives from the main_controller.
-//  */
-// module audio (
-//     input rst_n, clk,                   // Global active-low reset and clock.              
-//     input fish_caught,                  // Signals that a fish has been caught.
-//     input play_bang,                    // Prompts a bang sound when the cat is spawned.
-//     input play_default,                 // Prompts a default sound when the cat is in its default state.
-//     input play_sleeping,                // Prompts a sleeping sound when the cat is sleeping.
-//     input play_playing,                 // Prompts a playing sound when the cat is playing, e.g. every time the cat catches the ball.
-//     input play_dead,                    // Prompts a sound when the cat dies.
-//     input battery_almost_empty,         // Prompts a sound when the battery is almost empty.
-//     output audio_out                    // Audio output signal that goes to the audio PMOD.
-// );
-
-// endmodule
-
 `default_nettype none
 
 module audio (
-    input  wire [7:0] ui_in,    // Dedicated inputs
-    output wire [7:0] uo_out,   // Dedicated outputs
-    input  wire [7:0] uio_in,   // IOs: Input path
-    output wire [7:0] uio_out,  // IOs: Output path
-    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
-    input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
-    input  wire       rst_n,     // reset_n - low to reset
-    input  wire [6:0] state_sound // deze zijn niet perse de states v main maar eerder states voor welk geluid er gemaakt moet worden
+    input  wire       rst_n,     // reset_n - low to reset           
+    input fish_caught,                  // Signals that a fish has been caught.
+    input play_bang,                    // Prompts a bang sound when the cat is spawned.
+    input play_default,                 // Prompts a default sound when the cat is in its default state.
+    input play_sleeping,                // Prompts a sleeping sound when the cat is sleeping.
+    input play_dead,                    // Prompts a sound when the cat dies.
+    input battery_almost_empty,         // Prompts a sound when the battery is almost empty.
+    output audio_out                    // Audio output signal that goes to the audio PMOD.
 );
 
-    // state_sound[0] = play_dead
-    // state_sound[1] = battery
-    // state_sound[2] = play_sleeping
-    // state_sound[3] = fish_caught
-    // state_sound[4] = play_bang
-    // state_sound[5] = play_default
-    // state_sound[6] = play_playing
 
     // de periodes van de noten die ik nodig heb
     // noten voor play_dead
-    localparam si = 18'd202478;        // periode van de klok past 25 000 000/123.47 keer in de periode van si
-    localparam lakruis = 18'd214519;
-    localparam la = 18'd227273;
-    localparam lamol = 18'd240778;
+    localparam si = 19'd202478;        // periode van de klok past 25 000 000/123.47 keer in de periode van si
+    localparam lakruis = 19'd214519;
+    localparam la = 19'd227273;
+    localparam lamol = 19'd240778;
 
     reg [2:0] state_wompwomp;
 
     // noten voor batterij: halve toon van la-do-si
-    localparam la2 = 18'd28409;
-    localparam si2 = 18'd25310;
-    localparam do3 = 18'd23889;
+    localparam la2 = 19'd28409;
+    localparam si2 = 19'd25310;
+    localparam do3 = 19'd23889;
     reg [1:0] state_battery;
 
     // noten voor play_sleeping
-
+    reg [1:0] state_sleeping;
+    localparam la4 = 19'd56818;
+    localparam mi42 = 19'd75843;
+    localparam do4 = 19'd94830;
+    localparam la3 = 19'd113636;
 
     // noten voor fish_caught: sol-mi-do (vierde en vijfde octaaf)
     reg [1:0] state_fish;
-    localparam sol4 = 18'd15944;
-    localparam mi4 = 18'd18961;
-    localparam do5 = 18'd11945;
+    localparam sol4 = 19'd15944;
+    localparam mi4 = 19'd18961;
+    localparam do5 = 19'd11945;
 
     // noten voor play_bang
+    reg [1:0] state_bang;
+    localparam rek = 19'd321419;
+    localparam do1 = 19'd382205;
+    localparam fak = 19'd270270;
+
+    // noten voor play_default
+    reg [1:0] state_default;
+    // hergebruik do4 van play_sleeping
+    // hergebruik mi42 van play_sleeping
+    localparam sol42 = 19'd63776;
+    localparam do52 = 19'd47778;
 
     // instantieer play_note
     reg startsignaal = 0;
-    reg [17:0] tune = 0;
+    reg [18:0] tune = 0;
     reg [4:0] rythm = 0;
     wire state;
     wire done;
@@ -87,7 +77,13 @@ module audio (
         if (!rst_n)  begin
             counter_startsignaal <= 0;
             startsignaal <= 0;
-            rythm <= 0; end
+            rythm <= 0;
+            state_wompwomp <= 0;
+            state_bang <=0;
+            state_battery <= 0;
+            state_default <= 0;
+            state_fish <= 0;
+            state_sleeping <= 0; end
         else begin
 
         // startsignaal moet na 7 of  klokslagen terug 0 worden
@@ -98,16 +94,16 @@ module audio (
             counter_startsignaal <= counter_startsignaal + 1;
 
         // geen geluid maken
-        if (state_sound == 7'd0)
+        if (play_dead==0 && play_bang==0 && fish_caught==0 && battery_almost_empty==0 && play_sleeping==0 && play_default==0)
             startsignaal <= 0;
 
         // state machine voor play_dead == 1
         case (state_wompwomp)
 
             3'd0: begin                         // speel si gedurende een halve seconde
-                if (state_sound[1]==1 || state_sound[2]==1 || state_sound[3]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_wompwomp <= 3'd0;
-                else if (state_sound[0]) begin
+                else if (play_dead) begin
                     startsignaal <= 1;
                     tune <= si;
                     rythm <= 5'd5;  
@@ -115,7 +111,7 @@ module audio (
             end
         
             3'd1: begin                         // lakruis voor een halve seconde
-                if (state_sound[1]==1 || state_sound[2]==1 || state_sound[3]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_wompwomp <= 3'd0;
                 else if (done && !startsignaal) begin
                     startsignaal <= 1;
@@ -125,7 +121,7 @@ module audio (
             end
 
             3'd2: begin
-                if (state_sound[1]==1 || state_sound[2]==1 || state_sound[3]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_wompwomp <= 3'd0;
                 else if (done && !startsignaal)  begin
                     startsignaal <= 1;
@@ -135,7 +131,7 @@ module audio (
             end
 
             3'd3: begin
-                if (state_sound[1]==1 || state_sound[2]==1 || state_sound[3]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_wompwomp <= 3'd0;
                 else if (done && !startsignaal)   begin
                     startsignaal <= 1;
@@ -152,7 +148,7 @@ module audio (
         case (state_battery)
 
             2'd0: begin
-                if (state_sound == 7'b0000010) begin
+                if (play_bang==0 && play_dead==0 && battery_almost_empty==1 && play_sleeping==0 && play_default==0) begin
                     startsignaal <= 1;
                     tune <= la2;
                     rythm <= 5'd5;
@@ -160,7 +156,7 @@ module audio (
             end
 
             2'd1: begin
-                if (state_sound[0]==1 || state_sound[2]==1 || state_sound[3]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (play_dead==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_battery <= 2'd0;
                 else if (done && !startsignaal)   begin
                     startsignaal <= 1;
@@ -170,7 +166,7 @@ module audio (
             end
 
             2'd2: begin
-                if (state_sound[0]==1 || state_sound[2]==1 || state_sound[3]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (play_dead==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_battery <= 2'd0;
                 else if (done && !startsignaal)   begin
                     startsignaal <= 1;
@@ -187,9 +183,9 @@ module audio (
         case (state_fish)
 
             2'd0: begin
-                if (state_sound[0]==1 || state_sound[1]==1 || state_sound[2]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_fish <= 2'd0;
-                else if (state_sound[3]) begin
+                else if (fish_caught) begin
                     startsignaal <= 1;
                     tune <= sol4;
                     rythm <= 5'd1;
@@ -197,7 +193,7 @@ module audio (
             end
 
             2'd1: begin
-                if (state_sound[0]==1 || state_sound[1]==1 || state_sound[2]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_fish <= 2'd0;
                 else if (done && !startsignaal) begin
                     startsignaal <= 1;
@@ -207,7 +203,7 @@ module audio (
             end
 
             2'd2: begin
-                if (state_sound[0]==1 || state_sound[1]==1 || state_sound[2]==1 || state_sound[4]==1 || state_sound[5]==1 || state_sound[6]==1)
+                if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
                     state_fish <= 2'd0;
                 else if (done && !startsignaal) begin
                     startsignaal <= 1;
@@ -221,20 +217,140 @@ module audio (
         endcase
 
         // state machine voor play_bang == 1
-        
+        case (state_bang)
+
+            2'd0: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
+                    state_bang <= 2'd0;
+                else if (play_bang==1) begin
+                    startsignaal <= 1;
+                    tune <= rek;
+                    rythm <= 5'd8;
+                    state_bang <= 2'd1; end
+            end
+
+            2'd1: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
+                    state_bang <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= do1;
+                    rythm <= 5'd8;
+                    state_bang <= 2'd2; end
+            end
+
+            2'd2: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
+                    state_bang <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= fak;
+                    rythm <= 5'd20;
+                    state_bang <= 2'd0; end
+            end
+
+            default: state_bang <= 2'd0;
+
+        endcase
+
+        // state machine voor play_sleeping
+        case (state_sleeping)
+
+            2'd0: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                    state_sleeping <= 2'd0;
+                else if (play_sleeping) begin
+                    startsignaal <= 1;
+                    tune <= la4;
+                    rythm <= 5'd6;
+                    state_sleeping <= 2'd1; end
+            end
+
+            2'd1: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                    state_sleeping <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= mi42;
+                    rythm <= 5'd6;
+                    state_sleeping <= 2'd2; end
+            end
+
+            2'd2: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                    state_sleeping <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= do4;
+                    rythm <= 5'd6;
+                    state_sleeping <= 2'd3; end
+            end
+
+            2'd3: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                    state_sleeping <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= la3;
+                    rythm <= 5'd6;
+                    state_sleeping <= 2'd0; end
+            end
+
+            default: state_sleeping <= 2'd0;
+
+        endcase
+
+        // state machine voor play_default
+        case (state_default)
+
+            2'd0: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                    state_default <= 2'd0;
+                else if (play_default) begin
+                    startsignaal <= 1;
+                    tune <= do4;
+                    rythm <= 5'd6;
+                    state_default <= 2'd1; end
+            end
+
+            2'd1: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                    state_default <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= mi42;
+                    rythm <= 5'd6;
+                    state_default <= 2'd2; end
+            end
+
+            2'd2: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                    state_default <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= sol42;
+                    rythm <= 5'd6;
+                    state_default <= 2'd3; end
+            end
+
+            2'd3: begin
+                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                    state_default <= 2'd0;
+                else if (done && !startsignaal) begin
+                    startsignaal <= 1;
+                    tune <= do52;
+                    rythm <= 5'd6;
+                    state_default <= 2'd0; end
+            end
+
+            default: state_default <= 2'd0;
+
+        endcase
 
         end
     end
 
 
-  assign uio_out[7] = state;
-
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out = 0;
-  assign uio_out[6:0] = 7'b0;
-  assign uio_oe = 8'b10000000;
-
-  // List all unused inputs to prevent warnings
-  wire _unused = &{ena, uio_in[7:4], 1'b0};
+  assign audio_out = state;
 
 endmodule
