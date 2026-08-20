@@ -1,0 +1,160 @@
+`default_nettype none
+`timescale 1ns / 1ps
+
+module tb_audio ();
+
+    // =========================================================
+    // OPTIONAL WAVEFORM DUMP
+    //
+    // Comment this entire block out if simulation is still slow.
+    // =========================================================
+
+
+    // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+    initial begin
+        $dumpfile("tb_audio.fst");
+        $dumpvars(0, tb_audio);
+        #1;
+    end
+
+    // =========================================================
+    // CLOCK / RESET
+    // =========================================================
+
+    reg clk;
+    reg rst_n;
+
+    // =========================================================
+    // SIX SOUND INPUTS
+    // =========================================================
+
+    reg fish_caught;
+    reg play_bang;
+    reg play_default;
+    reg play_sleeping;
+    reg play_dead;
+    reg battery_almost_empty;
+
+    // =========================================================
+    // AUDIO OUTPUT
+    // =========================================================
+
+    wire audio_out;
+
+    // =========================================================
+    // PWM MONITOR
+    //
+    // One sample is produced every 256 clock cycles.
+    //
+    // pwm_high_count = number of HIGH clocks during one PWM
+    // period.
+    //
+    // pwm_sample_valid pulses HIGH for one clock when a complete
+    // PWM period has been measured.
+    // =========================================================
+
+    reg [7:0] pwm_clock_count;
+    reg [8:0] pwm_high_count;
+
+    reg       sample_valid;
+    reg [7:0] audio_sample;
+
+    // =========================================================
+    // CLOCK
+    // =========================================================
+
+    initial clk = 0;
+
+    always #20 clk = ~clk;   // 25 MHz
+
+    // =========================================================
+    // RESET
+    // =========================================================
+
+    initial begin
+        rst_n = 0;
+        #200;
+        rst_n = 1;
+    end
+
+    // =========================================================
+    // INITIAL INPUT VALUES
+    // =========================================================
+
+    initial begin
+        fish_caught          = 0;
+        play_bang            = 0;
+        play_default         = 0;
+        play_sleeping        = 0;
+        play_dead            = 0;
+        battery_almost_empty = 0;
+    end
+
+    // =========================================================
+    // DUT
+    //
+    // This assumes your audio module has these ports:
+    //
+    // input clk
+    // input rst_n
+    // input fish_caught
+    // input play_bang
+    // input play_default
+    // input play_sleeping
+    // input play_dead
+    // input battery_almost_empty
+    // output audio_out
+    // =========================================================
+
+    audio dut (
+        .clk                  (clk),
+        .rst_n                (rst_n),
+
+        .fish_caught          (fish_caught),
+        .play_bang            (play_bang),
+        .play_default         (play_default),
+        .play_sleeping        (play_sleeping),
+        .play_dead            (play_dead),
+        .battery_almost_empty (battery_almost_empty),
+
+        .audio_out            (audio_out)
+    );
+
+    // =========================================================
+    // PWM DUTY-CYCLE MEASUREMENT
+    // =========================================================
+
+    always @(posedge clk) begin
+
+    if (!rst_n) begin
+        pwm_clock_count <= 0;
+        pwm_high_count  <= 0;
+        sample_valid    <= 0;
+        audio_sample    <= 0;
+
+    end else begin
+
+        sample_valid <= 0;
+
+        if (pwm_clock_count == 8'd255) begin
+
+            // Publish the completed PWM measurement.
+            audio_sample <= pwm_high_count[7:0];
+            sample_valid <= 1;
+
+            // Start a new measurement.
+            pwm_clock_count <= 0;
+            pwm_high_count  <= 0;
+
+        end else begin
+
+            pwm_clock_count <= pwm_clock_count + 1;
+
+            if (audio_out)
+                pwm_high_count <= pwm_high_count + 1;
+
+        end
+    end
+end
+
+endmodule

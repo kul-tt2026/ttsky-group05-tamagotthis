@@ -72,8 +72,8 @@ module audio (
 
     reg [2:0] counter_startsignaal = 0;
 
-    always @(posedge clk) begin
-
+    always @(posedge clk or negedge rst_n) begin
+        // Asynchronous global reset
         if (!rst_n)  begin
             counter_startsignaal <= 0;
             startsignaal <= 0;
@@ -86,267 +86,265 @@ module audio (
             state_sleeping <= 0; end
         else begin
 
-        // startsignaal moet na 7 of  klokslagen terug 0 worden
-        if (counter_startsignaal >= 7 && startsignaal) begin
-            startsignaal <= 0;
-            counter_startsignaal <= 0;  end
-        else if (startsignaal == 1)
-            counter_startsignaal <= counter_startsignaal + 1;
+            // startsignaal moet na 7 klokslagen terug 0 worden
+            if (counter_startsignaal >= 7 && startsignaal) begin
+                startsignaal <= 0;
+                counter_startsignaal <= 0;  end
+            else if (startsignaal == 1)
+                counter_startsignaal <= counter_startsignaal + 1;
 
-        // geen geluid maken
-        if (play_dead==0 && play_bang==0 && fish_caught==0 && battery_almost_empty==0 && play_sleeping==0 && play_default==0)
-            startsignaal <= 0;
+            // geen geluid maken
+            if (play_dead==0 && play_bang==0 && fish_caught==0 && battery_almost_empty==0 && play_sleeping==0 && play_default==0)
+                startsignaal <= 0;
 
-        // state machine voor play_dead == 1
-        case (state_wompwomp)
+            // state machine voor play_dead == 1
+            case (state_wompwomp)
 
-            3'd0: begin                         // speel si gedurende een halve seconde
-                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_wompwomp <= 3'd0;
-                else if (play_dead) begin
-                    startsignaal <= 1;
-                    tune <= si;
-                    rythm <= 5'd5;  
-                    state_wompwomp <= 3'd1; end
-            end
-        
-            3'd1: begin                         // lakruis voor een halve seconde
-                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_wompwomp <= 3'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= lakruis;
-                    rythm <= 5'd5;
-                    state_wompwomp <= 3'd2;  end
-            end
+                3'd0: begin                         // speel si gedurende een halve seconde
+                    if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_wompwomp <= 3'd0;
+                    else if (play_dead) begin
+                        startsignaal <= 1;
+                        tune <= si;
+                        rythm <= 5'd5;  
+                        state_wompwomp <= 3'd1; end
+                end
+            
+                3'd1: begin                         // lakruis voor een halve seconde
+                    if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_wompwomp <= 3'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= lakruis;
+                        rythm <= 5'd5;
+                        state_wompwomp <= 3'd2;  end
+                end
 
-            3'd2: begin
-                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_wompwomp <= 3'd0;
-                else if (done && !startsignaal)  begin
-                    startsignaal <= 1;
-                    tune <= la;
-                    rythm <= 5'd5;  
-                    state_wompwomp <= 3'd3; end
-            end
+                3'd2: begin
+                    if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_wompwomp <= 3'd0;
+                    else if (done && !startsignaal)  begin
+                        startsignaal <= 1;
+                        tune <= la;
+                        rythm <= 5'd5;  
+                        state_wompwomp <= 3'd3; end
+                end
 
-            3'd3: begin
-                if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_wompwomp <= 3'd0;
-                else if (done && !startsignaal)   begin
-                    startsignaal <= 1;
-                    tune <= lamol;
-                    rythm <= 5'd31;
-                    state_wompwomp <= 3'd0;  end
-            end
+                3'd3: begin
+                    if (battery_almost_empty==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_wompwomp <= 3'd0;
+                    else if (done && !startsignaal)   begin
+                        startsignaal <= 1;
+                        tune <= lamol;
+                        rythm <= 5'd31;
+                        state_wompwomp <= 3'd0;  end
+                end
 
-            default: state_wompwomp <= 3'd0;
-        
-        endcase
+                default: state_wompwomp <= 3'd0;
+            
+            endcase
 
-        // state machine for battery == 1
-        case (state_battery)
+            // state machine for battery == 1
+            case (state_battery)
 
-            2'd0: begin
-                if (play_bang==0 && play_dead==0 && battery_almost_empty==1 && play_sleeping==0 && play_default==0) begin
-                    startsignaal <= 1;
-                    tune <= la2;
-                    rythm <= 5'd5;
-                    state_battery <= 2'd1;  end
-            end
+                2'd0: begin
+                    if (play_bang==0 && play_dead==0 && battery_almost_empty==1 && play_sleeping==0 && play_default==0) begin
+                        startsignaal <= 1;
+                        tune <= la2;
+                        rythm <= 5'd5;
+                        state_battery <= 2'd1;  end
+                end
 
-            2'd1: begin
-                if (play_dead==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_battery <= 2'd0;
-                else if (done && !startsignaal)   begin
-                    startsignaal <= 1;
-                    tune <= do3;
-                    rythm <= 5'd2;
-                    state_battery <= 2'd2;  end
-            end
+                2'd1: begin
+                    if (play_dead==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_battery <= 2'd0;
+                    else if (done && !startsignaal)   begin
+                        startsignaal <= 1;
+                        tune <= do3;
+                        rythm <= 5'd2;
+                        state_battery <= 2'd2;  end
+                end
 
-            2'd2: begin
-                if (play_dead==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_battery <= 2'd0;
-                else if (done && !startsignaal)   begin
-                    startsignaal <= 1;
-                    tune <= si2;
-                    rythm <= 5'd10;
-                    state_battery <= 2'd0;  end
-            end
+                2'd2: begin
+                    if (play_dead==1 || fish_caught==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_battery <= 2'd0;
+                    else if (done && !startsignaal)   begin
+                        startsignaal <= 1;
+                        tune <= si2;
+                        rythm <= 5'd10;
+                        state_battery <= 2'd0;  end
+                end
 
-            default: state_battery <= 2'd0;
+                default: state_battery <= 2'd0;
 
-        endcase
+            endcase
 
-        // state machine for fish_caught == 1
-        case (state_fish)
+            // state machine for fish_caught == 1
+            case (state_fish)
 
-            2'd0: begin
-                if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_fish <= 2'd0;
-                else if (fish_caught) begin
-                    startsignaal <= 1;
-                    tune <= sol4;
-                    rythm <= 5'd1;
-                    state_fish <= 2'd1; end
-            end
+                2'd0: begin
+                    if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_fish <= 2'd0;
+                    else if (fish_caught) begin
+                        startsignaal <= 1;
+                        tune <= sol4;
+                        rythm <= 5'd1;
+                        state_fish <= 2'd1; end
+                end
 
-            2'd1: begin
-                if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_fish <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= mi4;
-                    rythm <= 5'd1;
-                    state_fish <= 2'd2; end
-            end
+                2'd1: begin
+                    if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_fish <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= mi4;
+                        rythm <= 5'd1;
+                        state_fish <= 2'd2; end
+                end
 
-            2'd2: begin
-                if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
-                    state_fish <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= do5;
-                    rythm <= 5'd2;
-                    state_fish <= 2'd0; end
-            end
+                2'd2: begin
+                    if (play_dead==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1 || play_default==1)
+                        state_fish <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= do5;
+                        rythm <= 5'd2;
+                        state_fish <= 2'd0; end
+                end
 
-            default: state_fish <= 2'd0;
+                default: state_fish <= 2'd0;
 
-        endcase
+            endcase
 
-        // state machine voor play_bang == 1
-        case (state_bang)
+            // state machine voor play_bang == 1
+            case (state_bang)
 
-            2'd0: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
-                    state_bang <= 2'd0;
-                else if (play_bang==1) begin
-                    startsignaal <= 1;
-                    tune <= rek;
-                    rythm <= 5'd8;
-                    state_bang <= 2'd1; end
-            end
+                2'd0: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
+                        state_bang <= 2'd0;
+                    else if (play_bang==1) begin
+                        startsignaal <= 1;
+                        tune <= rek;
+                        rythm <= 5'd8;
+                        state_bang <= 2'd1; end
+                end
 
-            2'd1: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
-                    state_bang <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= do1;
-                    rythm <= 5'd8;
-                    state_bang <= 2'd2; end
-            end
+                2'd1: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
+                        state_bang <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= do1;
+                        rythm <= 5'd8;
+                        state_bang <= 2'd2; end
+                end
 
-            2'd2: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
-                    state_bang <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= fak;
-                    rythm <= 5'd20;
-                    state_bang <= 2'd0; end
-            end
+                2'd2: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_sleeping==1 || play_default==1)
+                        state_bang <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= fak;
+                        rythm <= 5'd20;
+                        state_bang <= 2'd0; end
+                end
 
-            default: state_bang <= 2'd0;
+                default: state_bang <= 2'd0;
 
-        endcase
+            endcase
 
-        // state machine voor play_sleeping
-        case (state_sleeping)
+            // state machine voor play_sleeping
+            case (state_sleeping)
 
-            2'd0: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
-                    state_sleeping <= 2'd0;
-                else if (play_sleeping) begin
-                    startsignaal <= 1;
-                    tune <= la4;
-                    rythm <= 5'd6;
-                    state_sleeping <= 2'd1; end
-            end
+                2'd0: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                        state_sleeping <= 2'd0;
+                    else if (play_sleeping) begin
+                        startsignaal <= 1;
+                        tune <= la4;
+                        rythm <= 5'd6;
+                        state_sleeping <= 2'd1; end
+                end
 
-            2'd1: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
-                    state_sleeping <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= mi42;
-                    rythm <= 5'd6;
-                    state_sleeping <= 2'd2; end
-            end
+                2'd1: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                        state_sleeping <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= mi42;
+                        rythm <= 5'd6;
+                        state_sleeping <= 2'd2; end
+                end
 
-            2'd2: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
-                    state_sleeping <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= do4;
-                    rythm <= 5'd6;
-                    state_sleeping <= 2'd3; end
-            end
+                2'd2: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                        state_sleeping <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= do4;
+                        rythm <= 5'd6;
+                        state_sleeping <= 2'd3; end
+                end
 
-            2'd3: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
-                    state_sleeping <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= la3;
-                    rythm <= 5'd6;
-                    state_sleeping <= 2'd0; end
-            end
+                2'd3: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_default==1)
+                        state_sleeping <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= la3;
+                        rythm <= 5'd6;
+                        state_sleeping <= 2'd0; end
+                end
 
-            default: state_sleeping <= 2'd0;
+                default: state_sleeping <= 2'd0;
 
-        endcase
+            endcase
 
-        // state machine voor play_default
-        case (state_default)
+            // state machine voor play_default
+            case (state_default)
 
-            2'd0: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
-                    state_default <= 2'd0;
-                else if (play_default) begin
-                    startsignaal <= 1;
-                    tune <= do4;
-                    rythm <= 5'd6;
-                    state_default <= 2'd1; end
-            end
+                2'd0: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                        state_default <= 2'd0;
+                    else if (play_default) begin
+                        startsignaal <= 1;
+                        tune <= do4;
+                        rythm <= 5'd6;
+                        state_default <= 2'd1; end
+                end
 
-            2'd1: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
-                    state_default <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= mi42;
-                    rythm <= 5'd6;
-                    state_default <= 2'd2; end
-            end
+                2'd1: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                        state_default <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= mi42;
+                        rythm <= 5'd6;
+                        state_default <= 2'd2; end
+                end
 
-            2'd2: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
-                    state_default <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= sol42;
-                    rythm <= 5'd6;
-                    state_default <= 2'd3; end
-            end
+                2'd2: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                        state_default <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= sol42;
+                        rythm <= 5'd6;
+                        state_default <= 2'd3; end
+                end
 
-            2'd3: begin
-                if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
-                    state_default <= 2'd0;
-                else if (done && !startsignaal) begin
-                    startsignaal <= 1;
-                    tune <= do52;
-                    rythm <= 5'd6;
-                    state_default <= 2'd0; end
-            end
+                2'd3: begin
+                    if (play_dead==1 || state_fish==1 || battery_almost_empty==1 || play_bang==1 || play_sleeping==1)
+                        state_default <= 2'd0;
+                    else if (done && !startsignaal) begin
+                        startsignaal <= 1;
+                        tune <= do52;
+                        rythm <= 5'd6;
+                        state_default <= 2'd0; end
+                end
 
-            default: state_default <= 2'd0;
-
-        endcase
-
+                default: state_default <= 2'd0;
+            endcase
         end
     end
 
