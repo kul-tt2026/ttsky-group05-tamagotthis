@@ -21,6 +21,8 @@ AUDIO_FS = 44_100
 
 # ============================================================
 # APPROXIMATE RC LOW-PASS FILTER
+# This is applied to the PWM output to simulate
+# the audio pmod physical qualities.
 # ============================================================
 
 R = 1000.0
@@ -57,11 +59,11 @@ def clear_sounds(dut):
 # ============================================================
 
 async def record_audio(
-    dut,
-    duration,
-    audio,
-    filter_state,
-    resample_state
+    dut,            # The Device Under Test.
+    duration,       # Duration of the signal to record, in seconds.
+    audio,          # Audio output signal: a list of filtered and downsampled values.
+    filter_state,   # Previous state of the low pass filter, to avoid discontinuities between audio signals.
+    resample_state  # Previous state of the sample accumulator, to avoid timing discrepencies between audio signals.
 ):
 
     number_of_samples = int(
@@ -122,11 +124,11 @@ async def record_audio(
 # ============================================================
 
 async def silence(
-    dut,
-    duration,
-    audio,
-    filter_state,
-    resample_state
+    dut,            # The Device Under Test.
+    duration,       # Duration of the signal to record, in seconds.
+    audio,          # Audio output signal: a list of filtered and downsampled values.
+    filter_state,   # Previous state of the low pass filter, to avoid discontinuities between audio signals.
+    resample_state  # Previous state of the sample accumulator, to avoid timing discrepencies between audio signals.
 ):
 
     clear_sounds(dut)
@@ -145,13 +147,13 @@ async def silence(
 # ============================================================
 
 async def play_sound(
-    dut,
-    name,
-    signal,
-    duration,
-    audio,
-    filter_state,
-    resample_state
+    dut,            # The Device Under Test.
+    name,           # Name of the sound played, only for logging purposes.
+    signal,         # Dut signal to turn high in order to activate the audio.
+    duration,       # Duration of the signal to record, in seconds.
+    audio,          # Audio output signal: a list of filtered and downsampled values.
+    filter_state,   # Previous state of the low pass filter, to avoid discontinuities between audio signals.
+    resample_state  # Previous state of the sample accumulator, to avoid timing discrepencies between audio signals.
 ):
 
     dut._log.info("--------------------------------")
@@ -212,7 +214,6 @@ async def test_all_sounds(dut):
 
     # Fractional accumulator for resampling.
     resample_state = [0.0]
-
 
     # ========================================================
     # 1. PLAY DEAD
