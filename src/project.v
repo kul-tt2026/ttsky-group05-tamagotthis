@@ -45,7 +45,6 @@ module tt_um_tamagotchi (
  
   // audio
   wire audio_out;
-  // wire [7:0] uio_out_audio, uio_oe_audio, uo_out_audio;
 
 
   // Placeholder fish position until a real fish controller is implemented.

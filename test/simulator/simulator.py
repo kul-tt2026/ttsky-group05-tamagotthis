@@ -13,13 +13,17 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode="threading")
 
 keys = {}
 
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@socketio.on("connect")
+def on_connect():
+    print("Browser connected")
 
 @socketio.on("key")
 def on_key(data):
@@ -28,6 +32,11 @@ def on_key(data):
 @app.route("/state")
 def state():
     return keys
+
+def play_audio_frequency(frequency):
+    socketio.emit("audio", {
+        "frequency": frequency
+    })
 
 def run_webserver():
     socketio.run(app, host="0.0.0.0", port=5000)
@@ -77,6 +86,8 @@ def is_pressed(key: str):
 # This test checks if the rst_n sequence is as expected for the main_controller.
 @cocotb.test()
 async def simulation(dut):
+    last_audio_freq = -1
+
     await setup_simulation(dut)
     
     Thread(target=run_webserver, daemon=True).start()
@@ -124,9 +135,18 @@ async def simulation(dut):
                          "SLEEPING" if dut.is_sleeping.value == 1 else \
                          "DEAD" if dut.is_dead.value == 1 else \
                          "<UNKNOWN_STATE>"
+        audio_freq = 0 if int(dut.audio.tune.value) == 0 or dut.audio.play_note.playing.value == 0 else 25000000 / int(dut.audio.tune.value)
+        stats["audio_period"] = str(audio_freq)
+        if audio_freq != last_audio_freq:
+            play_audio_frequency(audio_freq)
+            last_audio_freq = audio_freq
+            print(audio_freq)
         # stats["keys"] = str(keys)
-        clear_console()
-        print_stats(stats)
+
+        
+
+        # clear_console()
+        # print_stats(stats)
 
         # Advance Simulation.
         await ClockCycles(dut.clk, int(SIMULATION_FREQUENCY/24))

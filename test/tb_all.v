@@ -349,6 +349,7 @@ module tb_simulator ();
   reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
   reg [3:0] lives_left, battery_left;
   reg [17:0] slow_clocks;
+  reg audio_out; // the period (instead of frequency) of the currently played note.
 
   wire timing_option; // 0: slow timing, 1: fast timing.
   
@@ -415,6 +416,18 @@ module tb_simulator ();
       .fish_pos_x(fish_pos_x),
       .fish_pos_y(fish_pos_y),
       .fish_caught(fish_caught)
+  );
+
+  audio audio (
+    .clk(clk),
+    .rst_n(rst_n),
+    .fish_caught(fish_caught),
+    .play_bang(play_bang),
+    .play_default(play_default),
+    .play_sleeping(play_sleeping),
+    .play_dead(play_dead),
+    .battery_almost_empty(battery_almost_empty),
+    .audio_out(audio_out)
   );
 
 endmodule
