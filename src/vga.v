@@ -5,6 +5,7 @@
 */
 
 // gebaseerd op vga playground (https://vga-playground.com/?preset=logo) en nyan cat repo (https://github.com/a1k0n/tt08-nyan/blob/main/src/tt_um_a1k0n_nyancat.v)
+// it's kinda a mess right now, but it works :)
 
 `default_nettype none
 
