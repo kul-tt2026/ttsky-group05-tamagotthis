@@ -24,6 +24,8 @@ module tt_um_tamagotchi (
   wire [1:0] green;
   wire [1:0] blue;
 
+  wire hsync, vsync;
+
   vga vga_inst (
       .rst_n(rst_n),
       .clk(clk),
@@ -36,8 +38,8 @@ module tt_um_tamagotchi (
       .is_eating(1'b0),
       .is_dead(1'b0),
       .show_bang(1'b0),
-      .hsync(),
-      .vsync(),
+      .hsync(hsync),
+      .vsync(vsync),
       .R(red),
       .G(green),
       .B(blue),
