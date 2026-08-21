@@ -172,6 +172,7 @@ module tb_vga ();
   reg is_sleeping, is_playing, is_eating, is_dead, show_bang;
   reg hsync, vsync;
   reg [1:0] R, G, B;
+  reg [7:0] uo_out;
 
   // Replace tt_um_example with your module name:
   vga vga_dut (
@@ -190,7 +191,8 @@ module tb_vga ();
       .vsync(vsync),
       .R(R),
       .G(G),
-      .B(B)
+      .B(B),
+      .uo_out(uo_out)
   );
 
 endmodule
@@ -211,7 +213,7 @@ module tb_minigame ();
   reg is_eating, fish_caught;
 
   // Replace tt_um_example with your module name:
-  vga vga_dut (
+  minigame minigame_dut (
       .rst_n(rst_n),
       .clk(clk),
       .cat_pos_x(cat_pos_x),

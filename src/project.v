@@ -20,12 +20,33 @@ module tt_um_tamagotchi (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
+  wire [1:0] red;
+  wire [1:0] green;
+  wire [1:0] blue;
+
+  vga vga_inst (
+      .rst_n(rst_n),
+      .clk(clk),
+      .cat_pos_x(10'd0),
+      .fish_pos_x(10'd0),
+      .cat_pos_y(10'd0),
+      .fish_pos_y(10'd0),
+      .is_sleeping(1'b0),
+      .is_playing(1'b0),
+      .is_eating(1'b0),
+      .is_dead(1'b0),
+      .show_bang(1'b0),
+      .hsync(),
+      .vsync(),
+      .R(red),
+      .G(green),
+      .B(blue),
+      .uo_out(uo_out)
+  );
+
   assign uio_out = 0;
   assign uio_oe  = 0;
 
-  // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+  wire _unused = &{ena, ui_in, uio_in, red, green, blue, 1'b0};
 
 endmodule
