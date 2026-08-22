@@ -8,10 +8,10 @@ module palette_fish (
   reg [5:0] palette[3:0];
 
   initial begin
-    palette[0] = 6'b101110;  // fish background color: pastel blue
+    palette[0] = 6'b101011;  // fish background color: pastel purple
     palette[1] = 6'b000000;  // black
-    palette[3] = 6'b101011;  // gray
     palette[2] = 6'b111111;  // white
+    palette[3] = 6'b000110;  // blue
   end
 
   assign rrggbb = palette[color_index];

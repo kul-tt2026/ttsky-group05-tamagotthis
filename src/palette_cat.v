@@ -8,7 +8,7 @@ module palette_cat (
   reg [5:0] palette[3:0];
 
   initial begin
-    palette[0] = 6'b010111;  // cat background color: pastel blue
+    palette[0] = 6'b101011;  // background color: pastel purple
     palette[1] = 6'b000000;  // black
     palette[2] = 6'b111111;  // white
     palette[3] = 6'b010101;  // gray
