@@ -23,6 +23,7 @@ module main_controller (
     output is_eating,                                       // Signals that the food minigame is currently active.
     output show_bang, is_dead, is_sleeping, is_playing,     // Signals to the VGA about extra stuff to render and to the timer to affect the battery.
     output is_default_state,                                // Signals to the VGA that the cat is in the default state.
+    output increase_battery,                                // Signals to the VGA that the battery level needs to be increased
     output play_bang, play_default, play_dead,              // Signals to the audio which sound needs to be played.
     output play_playing, play_sleeping                      // Signals to the audio which sound needs to be played.
 );

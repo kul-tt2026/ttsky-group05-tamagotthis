@@ -38,6 +38,8 @@ module tt_um_tamagotchi (
       .is_eating(1'b0),
       .is_dead(1'b0),
       .show_bang(1'b0),
+      .increase_battery(1'b0),                  // uit main controller -- logica nog schrijven in main controller
+      .decrease_battery(1'b0),                  // uit timer -- deplete_battery signal
       .hsync(hsync),
       .vsync(vsync),
       .R(red),

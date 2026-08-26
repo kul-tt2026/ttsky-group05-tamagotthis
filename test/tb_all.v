@@ -169,7 +169,7 @@ module tb_vga ();
   reg clk;
   reg rst_n;
   reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
-  reg is_sleeping, is_playing, is_eating, is_dead, show_bang;
+  reg is_sleeping, is_playing, is_eating, is_dead, show_bang, increase_battery, decrease_battery;
   reg hsync, vsync;
   reg [1:0] R, G, B;
   reg [7:0] uo_out;
@@ -187,6 +187,8 @@ module tb_vga ();
       .is_eating(is_eating),
       .is_dead(is_dead),
       .show_bang(show_bang),
+      .increase_battery(increase_battery),
+      .decrease_battery(decrease_battery),
       .hsync(hsync),
       .vsync(vsync),
       .R(R),

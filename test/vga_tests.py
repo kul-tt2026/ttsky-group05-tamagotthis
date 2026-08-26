@@ -20,13 +20,15 @@ async def test_vga(dut):
     dut.is_eating.value = 0
     dut.is_dead.value = 0
     dut.show_bang.value = 0
+    dut.increase_battery.value = 0
+    dut.decrease_battery.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 2)
     dut.rst_n.value = 1
 
     cap = VGACapture(dut.clk, TinyVGA(dut.uo_out), VGA_640x480_60,
                      out_dir="output", name="screen").start()
-    frames = await cap.wait_for_frames(2)   # blocks until 2 complete frame
+    frames = await cap.wait_for_frames(10)   # blocks until 2 complete frame
     cap.stop()
 
     cap.check_timing(require_frames=2)      # raises VGATimingError on violations
