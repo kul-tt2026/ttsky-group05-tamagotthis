@@ -358,7 +358,7 @@ module tb_simulator ();
                                                   .slow_clocks(slow_clocks));
 
   assign clk_24Hz = slow_clocks[7];
-  assign clk_timer = timing_option ? slow_clocks[17] : slow_clocks[13];
+  assign clk_timer = timing_option ? slow_clocks[13] : slow_clocks[17];
   
   settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
                                                                              .clk(clk),

@@ -30,7 +30,7 @@ module main_controller (
     // Number of cycles the cat is shown as dead between lives.
     parameter DEAD_CYCLES = 30;
     // Number of cycles the bang is shown.
-    parameter RESET_CYCLES = 50;
+    parameter RESET_CYCLES = 150;
     // Number of pixels the cat moves over per button press in the eating state.
     parameter EAT_STEP_SIZE = 1;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move again unless button is pressed again'.
@@ -394,8 +394,8 @@ module main_controller (
     assign is_dead = (State == Dead);
     assign show_bang = (State == Bang);
 
-    assign play_bang = (next_state == Bang && State != Bang) || ~rst_n;  // If you want the signal to be a quick pulse.
-    // assign play_bang = show_bang;  // If you want the signal to stay on while in the bang state.
+    // assign play_bang = (next_state == Bang && State != Bang) || ~rst_n;  // If you want the signal to be a quick pulse.
+    assign play_bang = show_bang;  // If you want the signal to stay on while in the bang state.
     assign play_default = (next_state == Default && State != Default);
     // assign play_default = is_default_state;  // If you want the signal to stay on while in the bang state.
     assign play_playing = (next_state == Playing && State != Playing);  // If you want the signal to be a quick pulse.

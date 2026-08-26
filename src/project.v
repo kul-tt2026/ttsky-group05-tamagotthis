@@ -46,11 +46,6 @@ module tt_um_tamagotchi (
   // audio
   wire audio_out;
 
-
-  // Placeholder fish position until a real fish controller is implemented.
-  assign fish_pos_x = 10'd0;
-  assign fish_pos_y = 10'd0;
-
   gamepad_pmod_single gamepad_pmod (
       // Inputs:
       .clk(clk),
@@ -67,12 +62,7 @@ module tt_um_tamagotchi (
       .a(gamepad_a),
       .b(gamepad_b),
       .x(gamepad_x),
-      .y(gamepad_y),
-      .start(),
-      .select(),
-      .l(),
-      .r(),
-      .is_present()
+      .y(gamepad_y)
   );
 
   wire timing_option; // 0: slow timing, 1: fast timing.

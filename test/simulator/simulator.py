@@ -140,13 +140,13 @@ async def simulation(dut):
         if audio_freq != last_audio_freq:
             play_audio_frequency(audio_freq)
             last_audio_freq = audio_freq
-            print(audio_freq)
+            # print(audio_freq)
         # stats["keys"] = str(keys)
 
         
 
-        # clear_console()
-        # print_stats(stats)
+        clear_console()
+        print_stats(stats)
 
         # Advance Simulation.
         await ClockCycles(dut.clk, int(SIMULATION_FREQUENCY/24))
