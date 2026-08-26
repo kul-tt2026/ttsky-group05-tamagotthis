@@ -14,10 +14,11 @@ module vga (
     input reg [9:0] cat_pos_x, fish_pos_x,                                  // The x-positions of the cat and fish.
     input reg [9:0] cat_pos_y, fish_pos_y,                                  // The y-positionsof the cat and fish.
     input is_sleeping, is_playing, is_eating, is_dead, show_bang,           // Signals to determine what has to be shown on the VGA.
-    input reg increase_battery, decrease_battery,                            // Necessary to display the correct battery icon
+    input reg [2:0] battery_left,                                           // Necessary to display the correct battery icon
+    input reg [3:0] lives_left,                                             // Necessary to display the correct number of hearts
     output hsync, vsync,                                                    // VGA horizontal and vertical sync signals, going the the VGA PMOD.
     output reg [1:0] R, G, B,                                               // VGA color signals, going to the VGA PMOD.
-    output [7:0] uo_out
+    output [7:0] uo_out                                                     // ONLY FOR TESTING PURPOSES, needed for vga test, to remove in final version
 );
 
     localparam DISPLAY_WIDTH = 640;                                         // VGA display width
@@ -36,7 +37,7 @@ module vga (
 
     wire [1:0] heart_pixel_value;
     wire [5:0] heart_color;
-    reg [3:0] hearts_on_screen = 4'd9;                                      // number of hearts to be shown on the screen
+    // reg [3:0] hearts_on_screen;                                          // for testing
     localparam MAX_HEARTS = 9;                                              // maximum number of hearts
 
     reg [1:0] heart[0:MEM_HEART_WIDTH*MEM_HEART_HEIGHT-1];                  // currently 15*14 = 210 pixels --> 8 bit addresses
@@ -87,8 +88,9 @@ module vga (
         heart_pixels = 1'b0;
         heart_x = 10'd0;
         if (pix_y >= HEART_TOP && pix_y < HEART_TOP + HEART_HEIGHT) begin
-            for (heart_index = 0; heart_index < MAX_HEARTS; heart_index = heart_index + 1) begin                        // heart_index < hearts_on_screen not ok cause hearts_on_screen is not constant
-                if (heart_index < hearts_on_screen && pix_x >= heart_left(heart_index) && pix_x < heart_left(heart_index) + HEART_WIDTH) begin
+            for (heart_index = 0; heart_index < MAX_HEARTS; heart_index = heart_index + 1) begin                        // heart_index < lives_left not ok cause lives_left is not constant
+                if (heart_index < lives_left && pix_x >= heart_left(heart_index) && pix_x < heart_left(heart_index) + HEART_WIDTH) begin
+                // if (heart_index < hearts_on_screen && pix_x >= heart_left(heart_index) && pix_x < heart_left(heart_index) + HEART_WIDTH) begin       // for testing
                     heart_pixels = 1'b1;
                     heart_x = pix_x - heart_left(heart_index);
                 end
@@ -99,11 +101,6 @@ module vga (
     wire [7:0] heart_addr = heart_y * MEM_HEART_WIDTH + heart_x;
     
     assign heart_pixel_value = heart[heart_addr];
-
-    // always @(posedge is_dead) begin
-    //    hearts_on_screen <= hearts_on_screen - 1;
-    //    battery_level <= 3'd7;
-    // end
 
 
     // ------------------------------------------------------------------------------------------------------------------------------
@@ -117,17 +114,12 @@ module vga (
     localparam BATTERY_STRETCH_FACTOR = 1 << BATTERY_STRETCH_EXP;
 
     localparam BATTERY_WIDTH = MEM_BATTERY_WIDTH * BATTERY_STRETCH_FACTOR;                           
-    localparam BATTERY_HEIGHT = MEM_BATTERY_HEIGHT * BATTERY_STRETCH_FACTOR;
-
-    // decrease battery signaal uit timer nodig
-    // + increase battery signaal uit main_controller!
-    // batterij resetten als kat doodgaat
-
-    reg [2:0] battery_level = 3'd7;                                         // 3 bits for battery level (0-7) -- updated in the procedural block at the end
+    localparam BATTERY_HEIGHT = MEM_BATTERY_HEIGHT * BATTERY_STRETCH_FACTOR;           
 
     localparam BATTERY_TOP = 10'd5;
     localparam BATTERY_LEFT = 10'd603;
 
+    // reg [2:0] battery_level;                                              // for testing
     wire [2:0] batt_pixel_value;
     wire [5:0] batt_color;
 
@@ -137,10 +129,16 @@ module vga (
     end
 
     palette_battery batt_palette (
-        .battery_level(battery_level),
+        .battery_level(battery_left),
         .color_index(batt_pixel_value),
         .rrggbb(batt_color)
     );
+
+    //     palette_battery batt_palette (                                          // for testing
+    //     .battery_level(battery_level),
+    //     .color_index(batt_pixel_value),
+    //     .rrggbb(batt_color)
+    // );
 
     wire [9:0] batt_x = pix_x - BATTERY_LEFT;                                          
     wire [9:0] batt_y = pix_y - BATTERY_TOP;
@@ -283,26 +281,22 @@ module vga (
             dir_x <= 1;
             dir_y <= 0;
             prev_y <= 0;
-            battery_level <= 7;
+            // battery_level <= 7;          // for testing
+            // hearts_on_screen <= 9;
         end else begin
-            
-            // for testing only
-            if (increase_battery) begin
-                battery_level <= (battery_level == 3'd7) ? 3'd7 : battery_level + 1;
-            end else if (decrease_battery) begin
-                battery_level <= (battery_level == 3'd0) ? 3'd0 : battery_level - 1;
-            end
 
             prev_y <= pix_y;
             // pix_y tracks which horizontal line is being drawn, goes from 479 to 0 at the beginning of a new frame
             // stays 0 for the 640 pixels of the first horizontal line --> check if previous was zero
             if (pix_y == 0 && prev_y != pix_y) begin
-                if (first_frame) begin                                                          // to prevent having 8 hearts and battery level 6/7 in the first frame
-                    first_frame <= 0;                                                           
-                end else begin 
-                    battery_level <= (battery_level == 0) ? 0 : battery_level - 1;              // batterij testen
-                    hearts_on_screen <= (hearts_on_screen == 0) ? 0 : hearts_on_screen - 1;     // hartjes testen
-                end 
+
+                // for testing
+                // if (first_frame) begin                                                          // to prevent having 8 hearts and battery level 6/7 in the first frame
+                //     first_frame <= 0;                                                           
+                // end else begin 
+                //     battery_level <= (battery_level == 0) ? 0 : battery_level - 1;              // batterij testen
+                //     hearts_on_screen <= (hearts_on_screen == 0) ? 0 : hearts_on_screen - 1;     // hartjes testen
+                // end 
 
                 if (cat_left + CAT_HOR_STEP >= CAT_RIGHT_BOUNDARY - CAT_WIDTH && dir_x) begin
                     dir_x <= 0;
