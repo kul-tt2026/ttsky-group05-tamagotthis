@@ -42,7 +42,7 @@ make TOPLEVEL=tb_lfsr32 COCOTB_TEST_MODULES=lfsr32_tests
 ```
 To test the tamagotchi in a simulated environment:
 ```sh
-PYTHONPATH=$PWD/simulator:$PYTHONPATH make TOPLEVEL=tb_simulator COCOTB_TEST_MODULES=simulator 
+PYTHONPATH=$PWD/simulator:$PYTHONPATH make TOPLEVEL=tb_simulator COCOTB_TEST_MODULES=simulator
 ```
 In the bottom right of your screen, a message will pop up that 'port 5000 has been opened', press 'Open in browser'.
 Now you can give keyboard inputs in the browser window, while seeing the results in your terminal.

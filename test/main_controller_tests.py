@@ -6,10 +6,31 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
 # This file is used to test the main_controller implementation independantly.
+RESET_CYCLES = 150
+DEAD_CYCLES = 30
+# Number of cycles to sleep before the battery increases.
+SLEEP_TIME = 10
+# Number of cycles to play before the battery increases.
+PLAY_TIME = 10
+# Number of fish to catch before the battery increases.
+FISH_TO_CATCH = 3
+
+# Number of pixels moved per step.
+STEP_SIZE = 1
+# Number of clock cycles before the cat takes another step, if the button is not lifted.
+# -1 for 'no extra steps unless the button is pressed again'.
+STEP_INTERVAL = 2
+# Minimum and maximum positions the cat can reach.
+POS_MIN_X, POS_MAX_X, POS_MIN_Y, POS_MAX_Y = 0, 640-32, 0, 480-32
+
+STATE_BANG = 1
+STATE_DEFAULT = 2
+STATE_EATING = 4
+STATE_SLEEPING = 8
+STATE_PLAYING = 16
+STATE_DEAD = 32
 
 async def reset_cat_to_default(dut):
-    # Number of cycles the bang takes.
-    RESET_CYCLES = 50
     dut._log.info("Resetting cat to default state.")
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
@@ -18,7 +39,7 @@ async def reset_cat_to_default(dut):
     await ClockCycles(dut.clk, RESET_CYCLES + 5)
     assert_state(dut, state=STATE_DEFAULT)
     assert dut.lives_left.value == 9
-    assert dut.battery_left.value == 8
+    assert dut.battery_left.value == 7
     assert dut.battery_almost_empty.value == 0
     dut._log.info("    Reset to default state successful.")
 
@@ -43,13 +64,6 @@ async def setup_test(dut, test_id):
     cocotb.start_soon(clock.start())
 
     await reset_cat_to_default(dut)
-
-STATE_BANG = 1
-STATE_DEFAULT = 2
-STATE_EATING = 4
-STATE_SLEEPING = 8
-STATE_PLAYING = 16
-STATE_DEAD = 32
 
 def assert_state(dut, state, play_sound=-1):
     # state:
@@ -91,9 +105,6 @@ def assert_state(dut, state, play_sound=-1):
 @cocotb.test()
 async def reset_test(dut):
     await setup_test(dut, 1)
-
-    # Number of cycles the bang takes.
-    RESET_CYCLES = 50
 
     # Try to get the dut in some random state.
     dut._log.info("Entering some random state.")
@@ -261,7 +272,7 @@ async def max_one_valid_state_test(dut):
 
 
 # Check if moving the cat makes sense, in the eating state.
-# @cocotb.test()
+@cocotb.test()
 async def move_cat_when_eating_test(dut):
     await setup_test(dut, 4)
 
@@ -271,12 +282,6 @@ async def move_cat_when_eating_test(dut):
     dut.A.value = 0
     assert_state(dut, state=STATE_EATING)
     dut._log.info("    Reached Eating state.")
-
-    # Number of pixels moved per step.
-    STEP_SIZE = 1
-    # Number of clock cycles before the cat takes another step, if the button is not lifted.
-    # -1 for 'no extra steps unless the button is pressed again'.
-    STEP_INTERVAL = 10
 
     # Move left.
     dut._log.info("Move left.")
@@ -291,7 +296,7 @@ async def move_cat_when_eating_test(dut):
     (pos_x, pos_y) = (int(dut.cat_pos_x.value), int(dut.cat_pos_y.value))
     if STEP_INTERVAL > 0:
         dut.left.value = 1
-        await ClockCycles(dut.clk, 1 + STEP_INTERVAL * 5)
+        await ClockCycles(dut.clk, 3 + STEP_INTERVAL * 5)
         dut.left.value = 0
         await ClockCycles(dut.clk, 1)
         assert int(dut.cat_pos_x.value) == pos_x - 5 * STEP_SIZE and int(dut.cat_pos_y.value) == pos_y
@@ -310,7 +315,7 @@ async def move_cat_when_eating_test(dut):
     (pos_x, pos_y) = (int(dut.cat_pos_x.value), int(dut.cat_pos_y.value))
     if STEP_INTERVAL > 0:
         dut.right.value = 1
-        await ClockCycles(dut.clk, 1 + STEP_INTERVAL * 5)
+        await ClockCycles(dut.clk, 3 + STEP_INTERVAL * 5)
         dut.right.value = 0
         await ClockCycles(dut.clk, 1)
         assert int(dut.cat_pos_x.value) == pos_x + 5 * STEP_SIZE and int(dut.cat_pos_y.value) == pos_y
@@ -329,7 +334,7 @@ async def move_cat_when_eating_test(dut):
     (pos_x, pos_y) = (int(dut.cat_pos_x.value), int(dut.cat_pos_y.value))
     if STEP_INTERVAL > 0:
         dut.up.value = 1
-        await ClockCycles(dut.clk, 1 + STEP_INTERVAL * 5)
+        await ClockCycles(dut.clk, 3 + STEP_INTERVAL * 5)
         dut.up.value = 0
         await ClockCycles(dut.clk, 1)
         assert int(dut.cat_pos_x.value) == pos_x and int(dut.cat_pos_y.value) == pos_y - 5 * STEP_SIZE
@@ -348,7 +353,7 @@ async def move_cat_when_eating_test(dut):
     (pos_x, pos_y) = (int(dut.cat_pos_x.value), int(dut.cat_pos_y.value))
     if STEP_INTERVAL > 0:
         dut.down.value = 1
-        await ClockCycles(dut.clk, 1 + STEP_INTERVAL * 5)
+        await ClockCycles(dut.clk, 3 + STEP_INTERVAL * 5)
         dut.down.value = 0
         await ClockCycles(dut.clk, 1)
         assert int(dut.cat_pos_x.value) == pos_x and int(dut.cat_pos_y.value) == pos_y + 5 * STEP_SIZE
@@ -356,7 +361,7 @@ async def move_cat_when_eating_test(dut):
 
 
 # Check if the cat always has an on-screen position in the eating state.
-# @cocotb.test()
+@cocotb.test()
 async def valid_position_test(dut):
     await setup_test(dut, 5)
 
@@ -366,14 +371,6 @@ async def valid_position_test(dut):
     dut.A.value = 0
     assert_state(dut, state=STATE_EATING)
     dut._log.info("    Reached Eating state.")
-
-    # Number of pixels moved per step.
-    STEP_SIZE = 1
-    # Number of clock cycles before the cat takes another step, if the button is not lifted.
-    # -1 for 'no extra steps unless the button is pressed again'.
-    STEP_INTERVAL = 10
-    # Minimum and maximum positions the cat can reach.
-    POS_MIN_X, POS_MAX_X, POS_MIN_Y, POS_MAX_Y = 0, 100, 0, 200
 
     dut._log.info("MIN_X.")
     dut._log.info("    Moving to MIN_X edge.")
@@ -479,7 +476,7 @@ async def deplete_battery_test(dut):
     await setup_test(dut, 6)
 
     dut._log.info("Depleting battery in Default state.")
-    for battery in range(7,1,-1):
+    for battery in range(6,1,-1):
         dut._log.info(f"   Attempting battery level {battery+1}->{battery}.")
         dut.deplete_battery.value = 1
         await ClockCycles(dut.clk, 1)
@@ -493,7 +490,7 @@ async def deplete_battery_test(dut):
 async def battery_almost_empty_signal_test(dut):
     await setup_test(dut, 7)
     dut._log.info("Depleting battery in Default state.")
-    for battery in range(7,1,-1):
+    for battery in range(6,1,-1):
         dut._log.info(f"   Attempting battery level {battery+1}->{battery}.")
         dut.deplete_battery.value = 1
         await ClockCycles(dut.clk, 1)
@@ -509,13 +506,10 @@ async def battery_almost_empty_signal_test(dut):
 async def lose_life_test(dut):
     await setup_test(dut, 8)
 
-    # Number of cycles the cat is shown as dead before it is alive again.
-    DEAD_CYCLES = 30
-
     dut._log.info("Depleting battery in Default state till a life is lost.")
     for lives in range(8,1,-1):
         dut._log.info(f"   Attempting life {lives+1}->{lives}.")
-        for battery in range(8,0,-1):
+        for battery in range(7,0,-1):
             dut.deplete_battery.value = 1
             await ClockCycles(dut.clk, 1)
             dut.deplete_battery.value = 0
@@ -526,7 +520,7 @@ async def lose_life_test(dut):
         # After that, it comes back to life.
         await ClockCycles(dut.clk, DEAD_CYCLES+5)
         assert_state(dut, STATE_DEFAULT)
-        assert dut.battery_left.value == 8  # Resets battery.
+        assert dut.battery_left.value == 7  # Resets battery.
         assert dut.battery_almost_empty.value == 0
 
 
@@ -536,15 +530,10 @@ async def lose_life_test(dut):
 async def die_test(dut):
     await setup_test(dut, 9)
 
-    # Number of cycles the cat is shown as dead before it is reset.
-    DEAD_CYCLES = 30
-    # Number of cycles the bang takes.
-    RESET_CYCLES = 50
-
     dut._log.info("Depleting battery in Default state till a life is lost.")
     for lives in range(8,-1,-1):
         dut._log.info(f"   Attempting life {lives+1}->{lives}.")
-        for battery in range(8,0,-1):
+        for battery in range(7,0,-1):
             dut.deplete_battery.value = 1
             await ClockCycles(dut.clk, 1)
             dut.deplete_battery.value = 0
@@ -556,7 +545,7 @@ async def die_test(dut):
         if lives != 0:
             await ClockCycles(dut.clk, DEAD_CYCLES+5)
             assert_state(dut, STATE_DEFAULT)
-            assert dut.battery_left.value == 8  # Resets battery.
+            assert dut.battery_left.value == 7  # Resets battery.
             assert dut.battery_almost_empty.value == 0
     
     assert int(dut.lives_left.value) == 0 and int(dut.battery_left.value) == 0 and dut.battery_almost_empty.value == 0
@@ -566,7 +555,7 @@ async def die_test(dut):
     await ClockCycles(dut.clk, RESET_CYCLES)
     assert_state(dut, STATE_DEFAULT)
     assert dut.lives_left.value == 9
-    assert dut.battery_left.value == 8
+    assert dut.battery_left.value == 7
     assert dut.battery_almost_empty.value == 0
 
 
@@ -575,15 +564,8 @@ async def die_test(dut):
 async def increase_battery_test(dut):
     await setup_test(dut, 10)
 
-    # Number of cycles to sleep before the battery increases.
-    SLEEP_TIME = 10
-    # Number of cycles to play before the battery increases.
-    PLAY_TIME = 10
-    # Number of fish to catch before the battery increases.
-    FISH_TO_CATCH = 3
-
     dut._log.info("Artifically decreasing battery.")
-    for battery in range(8,3,-1):
+    for battery in range(7,3,-1):
         dut.deplete_battery.value = 1
         await ClockCycles(dut.clk, 1)
         dut.deplete_battery.value = 0
@@ -640,13 +622,10 @@ async def increase_battery_test(dut):
     dut._log.info("    Ate successfully, battery increased.")
 
 
-# Tests if the battery cannot exceed 8 levels.
+# Tests if the battery cannot exceed 7 levels.
 @cocotb.test()
 async def battery_max_test(dut):
     await setup_test(dut, 11)
-
-    # Number of cycles to sleep before the battery increases.
-    SLEEP_TIME = 10
 
     dut._log.info("Entering Sleeping state.")
     dut.Y.value = 1
@@ -659,13 +638,13 @@ async def battery_max_test(dut):
     dut._log.info("Sleeping for a long time.")
     await ClockCycles(dut.clk, SLEEP_TIME * 3)
     await ClockCycles(dut.clk, 5)
-    assert dut.battery_left.value == 8
+    assert dut.battery_left.value == 7
     dut._log.info("    Sleeping for a long time successul, battery levels did not exceed 8.")
 
 
-# Tests if the cat_mirrorred signal is correct in the eating state.
-# @cocotb.test()
-async def cat_mirrorred_eating_test(dut):
+# Tests if the cat_mirrored signal is correct in the eating state.
+@cocotb.test()
+async def cat_mirrored_eating_test(dut):
     await setup_test(dut, 12)
 
     dut._log.info("Entering Eating state.")
@@ -682,12 +661,12 @@ async def cat_mirrorred_eating_test(dut):
         await ClockCycles(dut.clk, 1)
         dut.left.value = 0
         await ClockCycles(dut.clk, 1)
-        assert dut.cat_mirrorred.value == 0
+        assert dut.cat_mirrored.value == 0
         dut._log.info("    Moved left, cat is not mirrorred.")
 
         dut._log.info("Standing still.")
         await ClockCycles(dut.clk, 10)
-        assert dut.cat_mirrorred.value == 0
+        assert dut.cat_mirrored.value == 0
         dut._log.info("    Stood still, cat is still not mirrorred.")
 
         dut._log.info("Moving right.")
@@ -695,12 +674,12 @@ async def cat_mirrorred_eating_test(dut):
         await ClockCycles(dut.clk, 1)
         dut.right.value = 0
         await ClockCycles(dut.clk, 1)
-        assert dut.cat_mirrorred.value == 1
+        assert dut.cat_mirrored.value == 1
         dut._log.info("    Moved right, cat is mirrorred.")
 
         dut._log.info("Standing still.")
         await ClockCycles(dut.clk, 10)
-        assert dut.cat_mirrorred.value == 1
+        assert dut.cat_mirrored.value == 1
         dut._log.info("    Stood still, cat is still mirrorred.")
 
 
