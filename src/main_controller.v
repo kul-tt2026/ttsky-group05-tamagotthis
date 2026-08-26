@@ -17,9 +17,9 @@ module main_controller (
     output reg [9:0] cat_pos_x,                             // The x-position of the cat.
     output reg [9:0] cat_pos_y,                             // The y-position of the cat.
     output reg [3:0] lives_left,                            // The number of lives the cat has left, to be shown on the VGA.
-    output reg [3:0] battery_left,                          // The number of battery bars the cat has left, to be shown on the VGA.
+    output reg [$clog2(MAX_BATTERY+1)-1:0] battery_left,    // The number of battery bars the cat has left, to be shown on the VGA.
     output battery_almost_empty,                            // Signals that the battery is almost empty.
-    output reg cat_mirrored,                               // Signals whether the cat image should be mirrorred.
+    output reg cat_mirrored,                                // Signals whether the cat image should be mirrorred.
     output is_eating,                                       // Signals that the food minigame is currently active.
     output show_bang, is_dead, is_sleeping, is_playing,     // Signals to the VGA about extra stuff to render and to the timer to affect the battery.
     output is_default_state,                                // Signals to the VGA that the cat is in the default state.
@@ -30,7 +30,7 @@ module main_controller (
     // Number of cycles the cat is shown as dead between lives.
     parameter DEAD_CYCLES = 30;
     // Number of cycles the bang is shown.
-    parameter RESET_CYCLES = 50;
+    parameter RESET_CYCLES = 150;
     // Number of pixels the cat moves over per button press in the eating state.
     parameter EAT_STEP_SIZE = 1;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move again unless button is pressed again'.
@@ -49,6 +49,8 @@ module main_controller (
     parameter PLAY_TIME = 10;
     // Number of fish to catch before the battery increases.
     parameter FISH_TO_CATCH = 3;
+
+    parameter MAX_BATTERY = 7;
     
     // min and max x and y positions for the cat.
     parameter MIN_POS_X = 0;
@@ -144,7 +146,7 @@ module main_controller (
                     next_cat_pos_x = START_POS_X;
                     next_cat_pos_y = START_POS_Y;
                     next_lives = 9;
-                    next_battery = 8;
+                    next_battery = MAX_BATTERY;
                     if (DEFAULT_STEP_INTERVAL > 0) begin
                         set_timer = 1;
                         timer_in = DEFAULT_STEP_INTERVAL;
@@ -279,7 +281,7 @@ module main_controller (
                     next_total_fish_caught = total_fish_caught - 1;
                     if (next_total_fish_caught == 0) begin
                         next_state = Default;
-                        next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                        next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                     end
                 end
             end
@@ -292,7 +294,7 @@ module main_controller (
                 end else if (B == 1) begin
                     next_state = Default;
                 end else if (timer == 0) begin
-                    next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                    next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                     set_timer = 1;
                     timer_in = SLEEP_TIME;
                 end
@@ -306,7 +308,7 @@ module main_controller (
                 end else if (B == 1) begin
                     next_state = Default;
                 end else if (timer == 0) begin
-                    next_battery = battery_left == 8 ? 8 : (battery_left + 1);
+                    next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                     set_timer = 1;
                     timer_in = PLAY_TIME;
                 end
@@ -314,7 +316,7 @@ module main_controller (
             Dead: begin
                 if (lives_left != 0 && timer == 0) begin
                     next_state = Default;
-                    next_battery = 8;
+                    next_battery = MAX_BATTERY;
                 end else if (timer == 0) begin
                     next_state = Bang;
                     set_timer = 1;
@@ -394,8 +396,8 @@ module main_controller (
     assign is_dead = (State == Dead);
     assign show_bang = (State == Bang);
 
-    assign play_bang = (next_state == Bang && State != Bang) || ~rst_n;  // If you want the signal to be a quick pulse.
-    // assign play_bang = show_bang;  // If you want the signal to stay on while in the bang state.
+    // assign play_bang = (next_state == Bang && State != Bang) || ~rst_n;  // If you want the signal to be a quick pulse.
+    assign play_bang = show_bang;  // If you want the signal to stay on while in the bang state.
     assign play_default = (next_state == Default && State != Default);
     // assign play_default = is_default_state;  // If you want the signal to stay on while in the bang state.
     assign play_playing = (next_state == Playing && State != Playing);  // If you want the signal to be a quick pulse.

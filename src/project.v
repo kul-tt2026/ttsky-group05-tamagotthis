@@ -155,6 +155,8 @@ module tt_um_tamagotchi (
     .is_eating(is_eating),
     .is_dead(is_dead),
     .show_bang(show_bang),
+    .battery_left(battery_left),
+    .lives_left(lives_left),
     .hsync(hsync),
     .vsync(vsync),
     .R(R),

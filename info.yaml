@@ -8,7 +8,7 @@ project:
   clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "1x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  tiles: "2x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
   top_module:  "tt_um_tamagotchi"
@@ -21,14 +21,19 @@ project:
     - "game_controller.v"
     - "main_controller.v"
     - "timer.v"
+    - "dood.v"
+    - "bitmap_rom_kat.v"
+    - "vga.v"
+    - "hvsync_generator.v"
+    - "palette_cat.v"
+    - "palette_fish.v"
+    - "palette_heart.v"
+    - "palette_battery.v"
     - "settings_manager.v"
     - "clock_divider.v"
     - "minigame.v"
     - "lfsr32.v"
-    - "vga.v"
-    - "hvsync_generator.v"
     - "audio.v"
-    - "palette_cat.v"
     - "play_note.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.

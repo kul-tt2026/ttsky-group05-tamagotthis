@@ -182,6 +182,9 @@ module tb_vga ();
   reg is_sleeping, is_playing, is_eating, is_dead, show_bang;
   reg hsync, vsync;
   reg [1:0] R, G, B;
+  reg [3:0] lives_left;
+  reg [2:0] battery_left;
+  reg [7:0] uo_out;
 
   // Replace tt_um_example with your module name:
   vga vga_dut (
@@ -196,11 +199,14 @@ module tb_vga ();
       .is_eating(is_eating),
       .is_dead(is_dead),
       .show_bang(show_bang),
+      .lives_left(lives_left),
+      .battery_left(battery_left),
       .hsync(hsync),
       .vsync(vsync),
       .R(R),
       .G(G),
-      .B(B)
+      .B(B),
+      .uo_out(uo_out)
   );
 
 endmodule
