@@ -33,7 +33,8 @@ module tt_um_tamagotchi (
   wire gamepad_y;
 
   wire [9:0] cat_pos_x, cat_pos_y;
-  wire [3:0] lives_left, battery_left;
+  wire [3:0] lives_left;
+  wire [2:0] battery_left;
   wire battery_almost_empty, deplete_battery, fish_caught, is_eating, show_bang, is_dead, is_sleeping, is_playing, is_default_state;
   wire play_bang, play_default, play_dead, play_playing, play_sleeping;
   wire cat_mirrored;

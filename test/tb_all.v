@@ -63,7 +63,8 @@ module tb_main_controller ();
   reg is_sleeping, fish_caught, is_playing, is_dead, is_eating, show_bang, deplete_battery, battery_almost_empty;
   reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping, cat_mirrored;
   reg [9:0] cat_pos_x, cat_pos_y;
-  reg [3:0] lives_left, battery_left;
+  reg [3:0] lives_left;
+  reg [2:0] battery_left;
 
   // Replace tt_um_example with your module name:
   main_controller main_controller_dut (
@@ -347,7 +348,8 @@ module tb_simulator ();
   reg is_sleeping, is_playing, is_dead, is_eating, show_bang, deplete_battery, battery_almost_empty;
   reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping, cat_mirrored;
   reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
-  reg [3:0] lives_left, battery_left;
+  reg [3:0] lives_left;
+  reg [2:0] battery_left;
   reg [17:0] slow_clocks;
   reg audio_out; // the period (instead of frequency) of the currently played note.
 

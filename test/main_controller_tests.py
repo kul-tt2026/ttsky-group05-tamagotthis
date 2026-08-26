@@ -39,7 +39,7 @@ async def reset_cat_to_default(dut):
     await ClockCycles(dut.clk, RESET_CYCLES + 5)
     assert_state(dut, state=STATE_DEFAULT)
     assert dut.lives_left.value == 9
-    assert dut.battery_left.value == 8
+    assert dut.battery_left.value == 7
     assert dut.battery_almost_empty.value == 0
     dut._log.info("    Reset to default state successful.")
 
@@ -476,7 +476,7 @@ async def deplete_battery_test(dut):
     await setup_test(dut, 6)
 
     dut._log.info("Depleting battery in Default state.")
-    for battery in range(7,1,-1):
+    for battery in range(6,1,-1):
         dut._log.info(f"   Attempting battery level {battery+1}->{battery}.")
         dut.deplete_battery.value = 1
         await ClockCycles(dut.clk, 1)
@@ -490,7 +490,7 @@ async def deplete_battery_test(dut):
 async def battery_almost_empty_signal_test(dut):
     await setup_test(dut, 7)
     dut._log.info("Depleting battery in Default state.")
-    for battery in range(7,1,-1):
+    for battery in range(6,1,-1):
         dut._log.info(f"   Attempting battery level {battery+1}->{battery}.")
         dut.deplete_battery.value = 1
         await ClockCycles(dut.clk, 1)
@@ -509,7 +509,7 @@ async def lose_life_test(dut):
     dut._log.info("Depleting battery in Default state till a life is lost.")
     for lives in range(8,1,-1):
         dut._log.info(f"   Attempting life {lives+1}->{lives}.")
-        for battery in range(8,0,-1):
+        for battery in range(7,0,-1):
             dut.deplete_battery.value = 1
             await ClockCycles(dut.clk, 1)
             dut.deplete_battery.value = 0
@@ -520,7 +520,7 @@ async def lose_life_test(dut):
         # After that, it comes back to life.
         await ClockCycles(dut.clk, DEAD_CYCLES+5)
         assert_state(dut, STATE_DEFAULT)
-        assert dut.battery_left.value == 8  # Resets battery.
+        assert dut.battery_left.value == 7  # Resets battery.
         assert dut.battery_almost_empty.value == 0
 
 
@@ -533,7 +533,7 @@ async def die_test(dut):
     dut._log.info("Depleting battery in Default state till a life is lost.")
     for lives in range(8,-1,-1):
         dut._log.info(f"   Attempting life {lives+1}->{lives}.")
-        for battery in range(8,0,-1):
+        for battery in range(7,0,-1):
             dut.deplete_battery.value = 1
             await ClockCycles(dut.clk, 1)
             dut.deplete_battery.value = 0
@@ -545,7 +545,7 @@ async def die_test(dut):
         if lives != 0:
             await ClockCycles(dut.clk, DEAD_CYCLES+5)
             assert_state(dut, STATE_DEFAULT)
-            assert dut.battery_left.value == 8  # Resets battery.
+            assert dut.battery_left.value == 7  # Resets battery.
             assert dut.battery_almost_empty.value == 0
     
     assert int(dut.lives_left.value) == 0 and int(dut.battery_left.value) == 0 and dut.battery_almost_empty.value == 0
@@ -555,7 +555,7 @@ async def die_test(dut):
     await ClockCycles(dut.clk, RESET_CYCLES)
     assert_state(dut, STATE_DEFAULT)
     assert dut.lives_left.value == 9
-    assert dut.battery_left.value == 8
+    assert dut.battery_left.value == 7
     assert dut.battery_almost_empty.value == 0
 
 
@@ -565,7 +565,7 @@ async def increase_battery_test(dut):
     await setup_test(dut, 10)
 
     dut._log.info("Artifically decreasing battery.")
-    for battery in range(8,3,-1):
+    for battery in range(7,3,-1):
         dut.deplete_battery.value = 1
         await ClockCycles(dut.clk, 1)
         dut.deplete_battery.value = 0
@@ -622,7 +622,7 @@ async def increase_battery_test(dut):
     dut._log.info("    Ate successfully, battery increased.")
 
 
-# Tests if the battery cannot exceed 8 levels.
+# Tests if the battery cannot exceed 7 levels.
 @cocotb.test()
 async def battery_max_test(dut):
     await setup_test(dut, 11)
@@ -638,7 +638,7 @@ async def battery_max_test(dut):
     dut._log.info("Sleeping for a long time.")
     await ClockCycles(dut.clk, SLEEP_TIME * 3)
     await ClockCycles(dut.clk, 5)
-    assert dut.battery_left.value == 8
+    assert dut.battery_left.value == 7
     dut._log.info("    Sleeping for a long time successul, battery levels did not exceed 8.")
 
 
