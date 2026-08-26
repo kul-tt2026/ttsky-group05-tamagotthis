@@ -334,7 +334,7 @@ module vga (
                     R <= heart_color[5:4];
                     G <= heart_color[3:2];
                     B <= heart_color[1:0];
-                end else if (fish_pixels) begin
+                end else if (fish_pixels && is_eating) begin
                     R <= fish_color[5:4];
                     G <= fish_color[3:2];
                     B <= fish_color[1:0];

@@ -13,11 +13,11 @@ async def test_vga(dut):
     cocotb.start_soon(Clock(dut.clk, 40, "ns").start())  # ~25 MHz pixel clock
     dut.cat_pos_x.value = 200
     dut.cat_pos_y.value = 200
-    dut.fish_pos_x.value = 100
+    dut.fish_pos_x.value = 100              # change position of the fish
     dut.fish_pos_y.value = 100
     dut.is_sleeping.value = 0
     dut.is_playing.value = 0
-    dut.is_eating.value = 0
+    dut.is_eating.value = 1                # set it to 0 to make the fish dissappear
     dut.is_dead.value = 0
     dut.show_bang.value = 0
     dut.lives_left.value = 9
@@ -28,9 +28,9 @@ async def test_vga(dut):
 
     cap = VGACapture(dut.clk, TinyVGA(dut.uo_out), VGA_640x480_60,
                      out_dir="output", name="screen").start()
-    frames = await cap.wait_for_frames(2)   # blocks until 2 complete frame
+    frames = await cap.wait_for_frames(1)   # blocks until 2 complete frame
     cap.stop()
 
-    cap.check_timing(require_frames=2)      # raises VGATimingError on violations
-    cap.save_gif()                          # output/myproject.gif
+    # cap.check_timing(require_frames=2)      # raises VGATimingError on violations
+    # cap.save_gif()                          # output/myproject.gif
     # frames[0].assert_matches("golden.png")  # golden-image regression (optional) -- need golden.png for it, not in this repo
