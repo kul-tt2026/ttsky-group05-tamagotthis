@@ -68,14 +68,14 @@ module tt_um_tamagotchi (
 
   wire timing_option; // 0: slow timing, 1: fast timing.
   wire [35:0] slow_clocks;
-  wire clk_6Hz, clk_timer;
+  wire clk_main_controller, clk_timer;
   
   clock_divider #(.DIVIDER_MSB(35)) clock_divider(.rst_n(rst_n),
-                                                  .clk(clk),
+                                                  .clk(vsync),
                                                   .slow_clocks(slow_clocks));
 
-  assign clk_6Hz = slow_clocks[22];
-  assign clk_timer = timing_option ? slow_clocks[35] : slow_clocks[27];
+  assign clk_main_controller = slow_clocks[0];  // +- 6Hz.
+  assign clk_timer = timing_option ? slow_clocks[5 + 13] : slow_clocks[5 + 5];
   
   settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
                                                                              .clk(clk),
@@ -83,7 +83,7 @@ module tt_um_tamagotchi (
                                                                              .settings(timing_option));
 
   timer timer(.rst_n(rst_n),
-              .clk(clk_6Hz),
+              .clk(clk_main_controller),
               .slow_clk(clk_timer),
               .is_sleeping(is_sleeping),
               .is_playing(is_playing),
@@ -92,7 +92,7 @@ module tt_um_tamagotchi (
  
   main_controller main_controller(
       .rst_n(rst_n),
-      .clk(clk),
+      .clk(clk_main_controller),
       .left(gamepad_left),
       .right(gamepad_right),
       .up(gamepad_up),
@@ -124,7 +124,7 @@ module tt_um_tamagotchi (
 
   minigame minigame (
       .rst_n(rst_n),
-      .clk(clk_6Hz),
+      .clk(clk_main_controller),
       .clk2(clk),
       .is_eating(is_eating),
       .cat_pos_x(cat_pos_x),
@@ -136,6 +136,7 @@ module tt_um_tamagotchi (
 
   vga vga(
     .clk(clk),
+    .slow_clk(clk_main_controller),
     .rst_n(rst_n),
     .cat_pos_x(cat_pos_x),
     .cat_pos_y(cat_pos_y),
@@ -146,6 +147,7 @@ module tt_um_tamagotchi (
     .is_eating(is_eating),
     .is_dead(is_dead),
     .show_bang(show_bang),
+    .cat_mirrored(cat_mirrored),
     .battery_left(battery_left),
     .lives_left(lives_left),
     .hsync(hsync),

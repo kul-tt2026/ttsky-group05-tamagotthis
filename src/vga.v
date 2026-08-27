@@ -10,20 +10,28 @@
 `default_nettype none
 
 module vga (
-    input rst_n, clk,                                                       // Global active-low reset and clock.
+    input rst_n, clk, slow_clk,                                             // Global active-low reset, clock and a slower clock that updates along with the main_controller.
     input reg [9:0] cat_pos_x, fish_pos_x,                                  // The x-positions of the cat and fish.
     input reg [9:0] cat_pos_y, fish_pos_y,                                  // The y-positionsof the cat and fish.
     input is_sleeping, is_playing, is_eating, is_dead, show_bang,           // Signals to determine what has to be shown on the VGA.
+    input cat_mirrored,                                                     // Should the cat be rendered mirrored?
     input reg [2:0] battery_left,                                           // Necessary to display the correct battery icon
     input reg [3:0] lives_left,                                             // Necessary to display the correct number of hearts
     output hsync, vsync,                                                    // VGA horizontal and vertical sync signals, going the the VGA PMOD.
     output reg [1:0] R, G, B,                                               // VGA color signals, going to the VGA PMOD.
-    output [7:0] uo_out                                                     // ONLY FOR TESTING PURPOSES, needed for vga test, to remove in final version
 );
 
     localparam DISPLAY_WIDTH = 640;                                         // VGA display width
     localparam DISPLAY_HEIGHT = 480;                                        // VGA display height
 
+    // ------------------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------ Random logic ----------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------------------------
+
+    // lfsr is a helper module to get pseudorandom bits.
+    wire [31:0] seed = 32'h1D54_EEF7;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
+    wire [31:0] random;
+    lfsr32 #(32,0) random_x(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(random));
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ Heart logic -----------------------------------------------------------------
@@ -189,6 +197,16 @@ module vga (
     // ------------------------------------------------ Cat logic -------------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
+    // Simple timer to implement extra behaviour when sleeping.
+    reg [5:0] sleep_timer;
+    always @(posedge slow_clk) begin
+        if (sleep_timer == 0) begin
+            sleep_timer <= 48;
+        end else begin
+            sleep_timer <= sleep_timer - 1;
+        end
+    end
+
     localparam MEM_CAT_WIDTH = 23;                                          // Width of the cat in kat.hex
     localparam MEM_CAT_HEIGHT = 25;                                         // Height of the cat in kat.hex
 
@@ -218,7 +236,7 @@ module vga (
 
     // addr = (y / stretch_factor) * MEM_CAT_WIDTH + (x / strech_factor) 
     // delen door strech factor (2^CAT_STRETCH_EXP) door te shiften naar rechts met CAT_STRETCH_EXP
-    wire [9:0] cat_addr = (cat_y >> CAT_STRETCH_EXP) * MEM_CAT_WIDTH + (cat_x >> CAT_STRETCH_EXP); 
+    wire [9:0] cat_addr = (cat_y >> CAT_STRETCH_EXP) * MEM_CAT_WIDTH + ((cat_mirrored ? CAT_WIDTH - 1 - cat_x :  cat_x) >> CAT_STRETCH_EXP); 
 
     assign cat_pixel_value = cat[cat_addr];
 
@@ -234,12 +252,12 @@ module vga (
     wire dead_eye_pixel_value, sleep_eye_pixel_value, eye_pixel_value;
     wire [5:0] eye_color;
 
-    wire is_left_eye = cat_x >= 5 & cat_x <= 8 & cat_y >= 6 & cat_y <= 9;
-    wire is_right_eye = cat_x >= 14 & cat_x <= 17 & cat_y >= 6 & cat_y <= 9;
+    wire is_left_eye = cat_x >> CAT_STRETCH_EXP >= 5 & cat_x >> CAT_STRETCH_EXP <= 8 & cat_y >> CAT_STRETCH_EXP >= 6 & cat_y >> CAT_STRETCH_EXP <= 9;
+    wire is_right_eye = cat_x >> CAT_STRETCH_EXP >= 14 & cat_x >> CAT_STRETCH_EXP <= 17 & cat_y >> CAT_STRETCH_EXP >= 6 & cat_y >> CAT_STRETCH_EXP <= 9;
     wire is_eye = is_left_eye | is_right_eye;
 
-    wire [9:0] eye_x = is_left_eye ? cat_x - 5 : cat_x - 14;
-    wire [9:0] eye_y = cat_y - 6;
+    wire [9:0] eye_x = is_left_eye ? (cat_x >> CAT_STRETCH_EXP) - 5 : (cat_x >> CAT_STRETCH_EXP) - 14;
+    wire [9:0] eye_y = (cat_y >> CAT_STRETCH_EXP) - 6;
 
     reg dead_eye[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
     reg sleep_eye[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
@@ -248,7 +266,7 @@ module vga (
         $readmemh("../src/data/cat_sleep_eye.hex", sleep_eye);
     end
 
-    wire [9:0] eye_addr = (eye_y >> CAT_STRETCH_EXP) * MEM_EYE_WIDTH + (eye_x >> CAT_STRETCH_EXP); 
+    wire [9:0] eye_addr = eye_y * MEM_EYE_WIDTH + (is_right_eye ? 3 - eye_x : eye_x); 
     assign dead_eye_pixel_value = dead_eye[eye_addr];
     assign sleep_eye_pixel_value = sleep_eye[eye_addr];
     assign eye_pixel_value = is_dead ? dead_eye_pixel_value : sleep_eye_pixel_value;
@@ -261,7 +279,7 @@ module vga (
 
     // ------------------------------------------------- Changeable ears ------------------------------------------------------------
 
-    localparam MEM_EAR_WIDTH = 5;                                          // Width of one cat ear in cat_raised_ear.hex
+    localparam MEM_EAR_WIDTH = 6;                                          // Width of one cat ear in cat_raised_ear.hex
     localparam MEM_EAR_HEIGHT = 8;                                         // Height of one cat ear in cat_raised_ear.hex
 
     localparam EAR_WIDTH = MEM_EAR_WIDTH * CAT_STRETCH_FACTOR;
@@ -270,19 +288,21 @@ module vga (
     wire [1:0] raised_ear_pixel_value;
     wire [5:0] raised_ear_color;
 
-    wire is_raised_ear_left = cat_x >= 0 & cat_x <= 4 & (cat_y >= 0 || cat_y == -1) & cat_y <= 6;
-    wire is_raised_ear_right = cat_x >= 18 & cat_x <= 22 & (cat_y >= 0 || cat_y == -1) & cat_y <= 6;
+    // The ear extends one pixel above the standard cat sprite, therefore, we hae to additionally check if cat_y is in -1*CAT_STRETCH_FACTOR,...,-1;
+    // Because we are working with unsigned arithmetic, this is done by taking the max value for cat_y (1023), and bitshifting it to the right.
+    wire is_raised_ear_left = cat_x >> CAT_STRETCH_EXP >= 0 & cat_x >> CAT_STRETCH_EXP < (0 + MEM_EAR_WIDTH) & (cat_y >> CAT_STRETCH_EXP >= 1023 >> CAT_STRETCH_EXP | cat_y >> CAT_STRETCH_EXP < MEM_EAR_HEIGHT-1);
+    wire is_raised_ear_right = cat_x >> CAT_STRETCH_EXP >= 17 & cat_x >> CAT_STRETCH_EXP < (17 + MEM_EAR_WIDTH) & (cat_y >> CAT_STRETCH_EXP >= 1023 >> CAT_STRETCH_EXP | cat_y >> CAT_STRETCH_EXP < MEM_EAR_HEIGHT-1);
     wire is_raised_ear = is_raised_ear_left | is_raised_ear_right;
 
-    wire [9:0] ear_x = is_raised_ear_left ? cat_x : MEM_EAR_WIDTH - (cat_x - 18) + 1; // Right ear should be mirrorred.
-    wire [9:0] ear_y = cat_y + 1;
+    wire [9:0] ear_x = is_raised_ear_left ? cat_x >> CAT_STRETCH_EXP : MEM_EAR_WIDTH - 1 - ((cat_x >> CAT_STRETCH_EXP) - 17); // Right ear should be mirrorred.
+    wire [9:0] ear_y = (cat_y + 1 * CAT_STRETCH_FACTOR) >> CAT_STRETCH_EXP;
 
-    reg [1:0] raised_ear[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
+    reg [1:0] raised_ear[0:MEM_EAR_WIDTH*MEM_EAR_HEIGHT-1];
     initial begin
         $readmemh("../src/data/cat_raised_ear.hex", raised_ear);
     end
 
-    wire [9:0] ear_addr = (ear_y >> CAT_STRETCH_EXP) * MEM_EAR_WIDTH + (ear_x >> CAT_STRETCH_EXP); 
+    wire [9:0] ear_addr = ear_y * MEM_EAR_WIDTH + ear_x; 
     assign raised_ear_pixel_value = raised_ear[ear_addr];
 
     // The ears use the same color as the cat.
@@ -294,33 +314,37 @@ module vga (
     
     // ----------------------------------------------- Combine into one cat ---------------------------------------------------------
 
+    
     reg [5:0] cat_color;
+    reg is_blinking;
+    reg sleepy_ear_twitch;
+    always @(posedge slow_clk) begin
+        is_blinking <= random[4:0] == 0;
+        sleepy_ear_twitch <= random[4:0] == 0;
+    end
     always @(*) begin
         // If there is a reason to change the ears, change them.
         // If there is a reason to show 'zzzz', do it.
-        if ((is_dead | is_sleeping) & is_eye) begin
+        if ((is_dead | is_sleeping | is_blinking) & is_eye) begin
             // If there is a reason to change the eyes, change them.
             cat_color = eye_color;
-        end else if (is_raised_ear_left) begin
-            // If there is a reason to change the ears, change them.
+        end else if (is_eating & is_raised_ear_left) begin
+            // If there is a reason to change the left ear, change it.
             cat_color = raised_ear_color;
-        end else begin
+        end else if ((is_eating | (sleepy_ear_twitch & is_sleeping)) & is_raised_ear_right) begin
+            // If there is a reason to change the right ear, change it.
+            cat_color = raised_ear_color;
+        end  else begin
             // Default behavior is to show the default cat.
             cat_color = default_cat_color;
         end
     end
-    wire cat_pixels = default_cat_pixels | is_raised_ear_left;
+    wire cat_pixels = default_cat_pixels;
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ zzz logic -------------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
-    localparam FIRST_Z_X_OFFSET = 32;
-    localparam FIRST_Z_Y_OFFSET = -8;
-    localparam Z_COUNT = 4;
-    localparam INTER_Z_X_OFFSET = 4;
-    localparam INTER_Z_Y_OFFSET = 5;
-    
     localparam MEM_Z_WIDTH = 4;                                          // Width of the 'z' glyph in z.hex
     localparam MEM_Z_HEIGHT = 5;                                         // Height of the 'z' glyph in z.hex
 
@@ -329,6 +353,12 @@ module vga (
 
     localparam Z_WIDTH = MEM_Z_WIDTH * Z_STRETCH_FACTOR;
     localparam Z_HEIGHT = MEM_Z_HEIGHT * Z_STRETCH_FACTOR;
+
+    localparam FIRST_Z_X_OFFSET = 20 << Z_STRETCH_EXP;
+    localparam FIRST_Z_Y_OFFSET = 1024 - (10 << Z_STRETCH_EXP);
+    localparam Z_COUNT = 4;
+    localparam INTER_Z_X_OFFSET = 5 << Z_STRETCH_EXP;
+    localparam INTER_Z_Y_OFFSET = 5 << Z_STRETCH_EXP;
 
     wire z_pixel_value;
     wire [5:0] z_color;
@@ -343,22 +373,25 @@ module vga (
         .rrggbb(z_color)
     );
 
-    wire is_z_array[0:Z_COUNT-1];                                           // bit i stores if the current pixel is part of the i'th Z.
-    wire is_z_concat[0:Z_COUNT-1];
+    wire [Z_COUNT-1:0] is_z_array;                                           // bit i stores if the current pixel is part of the i'th Z.
+    wire [Z_COUNT-1:0] is_z_concat;
     wire [9:0] z_x_array[0:Z_COUNT-1];
     wire [9:0] z_y_array[0:Z_COUNT-1];
     genvar i;
     generate
         for (i = 0; i < Z_COUNT; i = i + 1) begin : gen_z_loop
-            assign is_z_array[i] = cat_x >= FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i
-                                    & cat_x <= FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i + Z_WIDTH
-                                    & cat_y >= FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i
-                                    & cat_y <= FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i + Z_HEIGHT;
-            
-            assign is_z_concat[i] = i == 0 ? is_z_array[i] : is_z_array[i] | is_z_concat[i-1];
+            wire [11:0] temp1 = FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i;
+            wire [11:0] temp2 = FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i + Z_HEIGHT - 1;
+            assign is_z_array[i] = sleep_timer <= 12*(i+1)
+                                    & (cat_x >= FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i)
+                                    & (cat_x < FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i + Z_WIDTH)
+                                    & (cat_y >= temp1[9:0])
+                                    & (cat_y <= temp2[9:0]);
+                                    
+          assign is_z_concat[i] = i == 0 ? is_z_array[i] : is_z_array[i] | is_z_concat[i-1];
 
-            assign z_x_array[i] = is_z_array[i] ? cat_x - (FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i) : (i == 0 ? 9'b0 : z_x_array[i-1]);
-            assign z_y_array[i] = is_z_array[i] ?  cat_y - (FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i) : (i == 0 ? 9'b0 : z_y_array[i-1]);
+          assign z_x_array[i] = is_z_array[i] ? cat_x - (FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i) : (i == 0 ? 9'b0 : z_x_array[i-1]);
+          assign z_y_array[i] = is_z_array[i] ?  cat_y - (FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i) : (i == 0 ? 9'b0 : z_y_array[i-1]);
         end
     endgenerate
 
@@ -371,93 +404,15 @@ module vga (
 
     assign z_pixel_value = z_registers[z_addr];
 
+    // ------------------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------------ BANG ------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------------------------
 
-    // ------------------------------------------------ Bouncing cat logic ----------------------------------------------------------
-
-    // probably in playing state
-
-    // reg dir_x, dir_y;
-    // reg [9:0] prev_y;
-
-    // always @(posedge clk) begin
-    //     if (~rst_n) begin
-    //         cat_left <= 200;
-    //         cat_top <= 200;
-    //         dir_y <= 0;
-    //         dir_x <= 1;
-    //     end else begin
-    //         prev_y <= pix_y;
-    //         if (pix_y == 0 && prev_y != pix_y) begin
-    //             cat_left <= cat_left + (dir_x ? 1 : -1);
-    //             cat_top  <= cat_top + (dir_y ? 1 : -1);
-    //             if (cat_left - 1 == 0 && !dir_x) begin
-    //                 dir_x <= 1;
-    //             end
-    //             if (cat_left + 1 == DISPLAY_WIDTH - CAT_WIDTH && dir_x) begin
-    //                 dir_x <= 0;
-    //             end
-    //             if (cat_top - 1 == 0 && !dir_y) begin
-    //                 dir_y <= 1;
-    //             end
-    //             if (cat_top + 1 == DISPLAY_HEIGHT - CAT_HEIGHT && dir_y) begin
-    //                 dir_y <= 0;
-    //             end
-    //         end
-    //     end
-    // end
-
-    // ------------------------------------------------ Walking cat logic -----------------------------------------------------------
-
-    // used in default state
-    /*
-    reg first_frame = 1;
-
-    reg dir_x, dir_y;
-    reg [9:0] prev_y;
-
-    localparam CAT_LEFT_BOUNDARY = 150 ;
-    localparam CAT_RIGHT_BOUNDARY = 444;
-
-    localparam CAT_HOR_STEP = 10;
-    localparam CAT_VER_STEP = 1;
-
-    always @(posedge clk) begin
-        if (~rst_n) begin
-            cat_left <= 350;
-            cat_top <= 300;
-            dir_x <= 1;
-            dir_y <= 0;
-            prev_y <= 0;
-            // battery_level <= 7;          // for testing
-            // hearts_on_screen <= 9;
-        end else begin
-
-            prev_y <= pix_y;
-            // pix_y tracks which horizontal line is being drawn, goes from 479 to 0 at the beginning of a new frame
-            // stays 0 for the 640 pixels of the first horizontal line --> check if previous was zero
-            if (pix_y == 0 && prev_y != pix_y) begin
-
-                // for testing
-                // if (first_frame) begin                                                          // to prevent having 8 hearts and battery level 6/7 in the first frame
-                //     first_frame <= 0;                                                           
-                // end else begin 
-                //     battery_level <= (battery_level == 0) ? 0 : battery_level - 1;              // batterij testen
-                //     hearts_on_screen <= (hearts_on_screen == 0) ? 0 : hearts_on_screen - 1;     // hartjes testen
-                // end 
-
-                if (cat_left + CAT_HOR_STEP >= CAT_RIGHT_BOUNDARY - CAT_WIDTH && dir_x) begin
-                    dir_x <= 0;
-                end else if (cat_left - CAT_HOR_STEP <= CAT_LEFT_BOUNDARY && !dir_x) begin
-                    dir_x <= 1;
-                end
-
-                dir_y <= !dir_y;
-                cat_left <= cat_left + (dir_x ? CAT_HOR_STEP : -CAT_HOR_STEP);
-                cat_top  <= cat_top + (dir_y ? CAT_VER_STEP : -CAT_VER_STEP);
-            end
-        end
+    reg [5:0] bang_color;
+    always @(posedge slow_clk) begin
+        bang_color <= {random[2], random[3], random[6], random[18], random[10], random[13]};
     end
-    */
+
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ RBG output logic ------------------------------------------------------------
@@ -476,7 +431,11 @@ module vga (
             if (video_active) begin
                 // The order of the if statements defines the rendering order.
                 // By checking if an appropriate color is not the background color, we do not get rectangles in the background color cutting through items in lower rendering layers.
-                if (heart_pixels & heart_color != BACKGROUND_COLOR) begin
+                if (show_bang) begin
+                    R <= bang_color[5:4];
+                    G <= bang_color[3:2];
+                    B <= bang_color[1:0];
+                end else if (heart_pixels & heart_color != BACKGROUND_COLOR) begin
                     R <= heart_color[5:4];
                     G <= heart_color[3:2];
                     B <= heart_color[1:0];
@@ -519,9 +478,6 @@ module vga (
     .display_on(video_active),
     .hpos(pix_x),
     .vpos(pix_y)
-    );
-
-    assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
-    
+    );    
 
 endmodule

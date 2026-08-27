@@ -8,8 +8,8 @@ module palette_eyes (
   reg [5:0] palette[3:0];
 
   initial begin
-    palette[0] = 6'b000000;  // black
-    palette[1] = 6'b010101;  // gray
+    palette[0] = 6'b010101;  // gray
+    palette[1] = 6'b000000;  // black
   end
 
   assign rrggbb = palette[color_index];

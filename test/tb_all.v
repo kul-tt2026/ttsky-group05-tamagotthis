@@ -206,9 +206,10 @@ module tb_vga ();
       .vsync(vsync),
       .R(R),
       .G(G),
-      .B(B),
-      .uo_out(uo_out)
+      .B(B)
   );
+
+  assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
 
 endmodule
 

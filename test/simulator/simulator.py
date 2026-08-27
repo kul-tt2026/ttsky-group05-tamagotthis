@@ -135,6 +135,7 @@ async def simulation(dut):
                          "SLEEPING" if dut.is_sleeping.value == 1 else \
                          "DEAD" if dut.is_dead.value == 1 else \
                          "<UNKNOWN_STATE>"
+        stats["timer"] = str(int(dut.main_controller.timer.value))
         audio_freq = 0 if int(dut.audio.tune.value) == 0 or dut.audio.play_note.playing.value == 0 else 25000000 / int(dut.audio.tune.value)
         stats["audio_period"] = str(audio_freq)
         if audio_freq != last_audio_freq:

@@ -32,17 +32,17 @@ module main_controller (
     // Number of cycles the bang is shown.
     parameter RESET_CYCLES = 150;
     // Number of pixels the cat moves over per button press in the eating state.
-    parameter EAT_STEP_SIZE = 1;
+    parameter EAT_STEP_SIZE = 2;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move again unless button is pressed again'.
-    parameter EAT_STEP_INTERVAL = 2;
+    parameter EAT_STEP_INTERVAL = 1;
     // Number of pixels the cat moves over per button press in the eating state.
-    parameter DEFAULT_STEP_SIZE = 1;
+    parameter DEFAULT_STEP_SIZE = 2;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move'.
-    parameter DEFAULT_STEP_INTERVAL = -1;
+    parameter DEFAULT_STEP_INTERVAL = 2;
     // Number of pixels the cat moves over per button press in the eating state.
     parameter PLAY_STEP_SIZE = 2;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move'.
-    parameter PLAY_STEP_INTERVAL = -1;
+    parameter PLAY_STEP_INTERVAL = 0;
     // Number of cycles to sleep before the battery increases.
     parameter SLEEP_TIME = 10;
     // Number of cycles to play before the battery increases.
@@ -54,9 +54,9 @@ module main_controller (
     
     // min and max x and y positions for the cat.
     parameter MIN_POS_X = 0;
-    parameter MAX_POS_X = 640-32;
+    parameter MAX_POS_X = 640-23*2;
     parameter MIN_POS_Y = 0;
-    parameter MAX_POS_Y = 480-32;
+    parameter MAX_POS_Y = 480-25*2;
     // The location at which the cat spawns.
     parameter START_POS_X = 50;
     parameter START_POS_Y = 100;
@@ -88,7 +88,8 @@ module main_controller (
     reg [$clog2(FISH_TO_CATCH+1)-1:0] next_total_fish_caught;
 
     // Movement system.
-    reg [9:0] next_cat_pos_x, next_cat_pos_y, next_cat_pos_x_play;
+    reg [9:0] next_cat_pos_x, next_cat_pos_y, next_cat_pos_x_play, next_cat_pos_y_play;
+    reg hop_up, next_hop_up, next_hop_up_play; // Additional bit to store if the cat just did a hop up or down.
 
     always @(posedge clk, negedge rst_n) begin
         // Active low reset.
@@ -115,7 +116,8 @@ module main_controller (
             has_moved_right <= next_has_moved_right;
             has_moved_down <= next_has_moved_down;
             cat_pos_x <= State == Playing ? next_cat_pos_x_play : next_cat_pos_x;
-            cat_pos_y <= next_cat_pos_y;
+            cat_pos_y <= State == Playing ? next_cat_pos_y_play : next_cat_pos_y;
+            hop_up <= State == Playing ? next_hop_up_play : next_hop_up;
         end
     end
     
@@ -129,6 +131,7 @@ module main_controller (
         next_cat_pos_y = cat_pos_y;
         next_cat_mirrored = cat_mirrored;
         next_total_fish_caught = total_fish_caught;
+        next_hop_up = hop_up;
         next_has_moved_left = 1'bx;
         next_has_moved_down = 1'bx;
         next_has_moved_right = 1'bx;
@@ -147,6 +150,7 @@ module main_controller (
                     next_cat_pos_y = START_POS_Y;
                     next_lives = 9;
                     next_battery = MAX_BATTERY;
+                    next_hop_up = 1;
                     if (DEFAULT_STEP_INTERVAL > 0) begin
                         set_timer = 1;
                         timer_in = DEFAULT_STEP_INTERVAL;
@@ -159,19 +163,24 @@ module main_controller (
                     next_lives = lives_left - 1;
                     set_timer = 1;
                     timer_in = DEAD_CYCLES;
+                    if (hop_up) next_cat_pos_y = cat_pos_y - 2;
                 end else if (X == 1) begin
                     next_state = Playing;
                     set_timer = 1;
                     timer_in = PLAY_TIME;
+                    next_hop_up = 1;
+                    if (hop_up) next_cat_pos_y = cat_pos_y - 2;
                 end else if (Y == 1) begin
                     next_state = Sleeping;
                     set_timer = 1;
                     timer_in = SLEEP_TIME;
+                    if (hop_up) next_cat_pos_y = cat_pos_y - 2;
                 end else if (A == 1) begin
                     next_state = Eating;
                     next_total_fish_caught = FISH_TO_CATCH;
+                    if (hop_up) next_cat_pos_y = cat_pos_y - 2;
                 end
-                if (DEFAULT_STEP_INTERVAL > 0) begin
+                else if (DEFAULT_STEP_INTERVAL > 0) begin
                     if (timer == 0) begin
                         set_timer = 1;
                         timer_in = DEFAULT_STEP_INTERVAL;
@@ -186,6 +195,9 @@ module main_controller (
                         end else begin
                             next_cat_pos_x = cat_pos_x - DEFAULT_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
                         end
+                        next_hop_up = !hop_up;
+                        if (hop_up) next_cat_pos_y = cat_pos_y + 2;
+                        else next_cat_pos_y = cat_pos_y - 2;
                     end
                 end else if (DEFAULT_STEP_INTERVAL == 0) begin
                     if (cat_pos_x == MAX_POS_X) begin
@@ -204,6 +216,11 @@ module main_controller (
             Eating: begin
                 if (B == 1) begin
                     next_state = Default;
+                    next_hop_up = 1;
+                    if (DEFAULT_STEP_INTERVAL > 0) begin
+                        set_timer = 1;
+                        timer_in = DEFAULT_STEP_INTERVAL;
+                    end
                 end
 
                 // Move buttons.
@@ -281,6 +298,10 @@ module main_controller (
                     next_total_fish_caught = total_fish_caught - 1;
                     if (next_total_fish_caught == 0) begin
                         next_state = Default;
+                        if (DEFAULT_STEP_INTERVAL > 0) begin
+                            set_timer = 1;
+                            timer_in = DEFAULT_STEP_INTERVAL;
+                        end
                         next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                     end
                 end
@@ -293,6 +314,11 @@ module main_controller (
                     timer_in = DEAD_CYCLES;
                 end else if (B == 1) begin
                     next_state = Default;
+                    next_hop_up = 1;
+                    if (DEFAULT_STEP_INTERVAL > 0) begin
+                        set_timer = 1;
+                        timer_in = DEFAULT_STEP_INTERVAL;
+                    end
                 end else if (timer == 0) begin
                     next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                     set_timer = 1;
@@ -307,6 +333,11 @@ module main_controller (
                     timer_in = DEAD_CYCLES;
                 end else if (B == 1) begin
                     next_state = Default;
+                    next_hop_up = 1;
+                    if (DEFAULT_STEP_INTERVAL > 0) begin
+                        set_timer = 1;
+                        timer_in = DEFAULT_STEP_INTERVAL;
+                    end
                 end else if (timer == 0) begin
                     next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                     set_timer = 1;
@@ -316,6 +347,11 @@ module main_controller (
             Dead: begin
                 if (lives_left != 0 && timer == 0) begin
                     next_state = Default;
+                    next_hop_up = 1;
+                    if (DEFAULT_STEP_INTERVAL > 0) begin
+                        set_timer = 1;
+                        timer_in = DEFAULT_STEP_INTERVAL;
+                    end
                     next_battery = MAX_BATTERY;
                 end else if (timer == 0) begin
                     next_state = Bang;
@@ -366,24 +402,54 @@ module main_controller (
         end else if (PLAY_STEP_INTERVAL == 0) begin // PLAY_STEP_INTERVAL == 0: movement every tick.
             always @(*) begin
                 next_cat_mirrored_play = cat_mirrored;
+                next_hop_up = hop_up;
 
                 if ((State == Default && X == 1) || State == Playing) begin
                     if (cat_pos_x == MAX_POS_X) begin
                         next_cat_pos_x_play = MAX_POS_X - PLAY_STEP_SIZE;
                         next_cat_mirrored_play = 0;
                     end else if (cat_pos_x == MIN_POS_X) begin
-                        next_cat_mirrored_play = 1;
                         next_cat_pos_x_play = MIN_POS_X + PLAY_STEP_SIZE;
+                        next_cat_mirrored_play = 1;
                     end else if (cat_mirrored) begin
                         next_cat_pos_x_play = cat_pos_x + PLAY_STEP_SIZE >= MAX_POS_X ? MAX_POS_X : cat_pos_x + PLAY_STEP_SIZE;
                     end else begin
                         next_cat_pos_x_play = cat_pos_x - PLAY_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - PLAY_STEP_SIZE;
                     end
+
+                    // if (cat_pos_y == MAX_POS_Y) begin
+                    //     next_cat_pos_y_play = MAX_POS_Y - PLAY_STEP_SIZE;
+                    //     next_hop_up = 1;
+                    // end else if (cat_pos_y == MIN_POS_Y) begin
+                    //     next_cat_pos_y_play = MIN_POS_Y + PLAY_STEP_SIZE;
+                    //     next_hop_up = 1;
+                    // end else if (hop_up) begin
+                    if (next_hop_up_play) begin
+                        next_cat_pos_y_play = cat_pos_y + PLAY_STEP_SIZE;
+                        if (cat_pos_y + PLAY_STEP_SIZE >= MAX_POS_Y) begin
+                          next_cat_pos_y_play = MAX_POS_Y;
+                          next_hop_up_play = ~hop_up;
+                        end
+                    end else begin
+                        next_cat_pos_y_play = cat_pos_y - PLAY_STEP_SIZE;
+                        // Take a safety margin for if we have integer overflow due to the subtraction.
+                        if (cat_pos_y - PLAY_STEP_SIZE <= MIN_POS_Y | cat_pos_y - PLAY_STEP_SIZE > MAX_POS_Y + 50) begin
+                          next_cat_pos_y_play = MIN_POS_Y;
+                          next_hop_up_play = ~hop_up;
+                        end
+                    end
+                end else begin // PLAY_STEP_INTERVAL < 0: no movement.
+                    assign next_cat_pos_x_play = cat_pos_x;
+                    assign next_cat_pos_y_play = cat_pos_y;
+                    assign next_cat_mirrored_play = cat_mirrored;
+                    assign next_hop_up_play = hop_up;
                 end
             end
         end else begin // PLAY_STEP_INTERVAL < 0: no movement.
             assign next_cat_pos_x_play = cat_pos_x;
+            assign next_cat_pos_y_play = cat_pos_y;
             assign next_cat_mirrored_play = cat_mirrored;
+            assign next_hop_up_play = hop_up;
         end
     endgenerate
 
@@ -398,7 +464,7 @@ module main_controller (
 
     // assign play_bang = (next_state == Bang && State != Bang) || ~rst_n;  // If you want the signal to be a quick pulse.
     assign play_bang = show_bang;  // If you want the signal to stay on while in the bang state.
-    assign play_default = (next_state == Default && State != Default);
+    assign play_default = (next_state == Default && (State == Sleeping | State == Dead | State == Bang));
     // assign play_default = is_default_state;  // If you want the signal to stay on while in the bang state.
     assign play_playing = (next_state == Playing && State != Playing);  // If you want the signal to be a quick pulse.
     // assign play_playing = is_playing;  // If you want the signal to stay on while in the bang state.

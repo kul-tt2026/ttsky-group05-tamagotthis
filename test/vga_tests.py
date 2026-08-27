@@ -17,8 +17,8 @@ async def test_vga(dut):
     dut.fish_pos_y.value = 100
     dut.is_sleeping.value = 0
     dut.is_playing.value = 0
-    dut.is_eating.value = 1                # set it to 0 to make the fish dissappear
-    dut.is_dead.value = 0
+    dut.is_eating.value = 0                # set it to 0 to make the fish dissappear
+    dut.is_dead.value = 1
     dut.show_bang.value = 0
     dut.lives_left.value = 9
     dut.battery_left.value = 7
