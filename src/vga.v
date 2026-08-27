@@ -35,8 +35,8 @@ module vga (
     localparam HEART_WIDTH = MEM_HEART_WIDTH;                               // No stretch factor
     localparam HEART_HEIGHT = MEM_HEART_HEIGHT;
 
-    wire [1:0] heart_pixel_value;
-    wire [5:0] heart_color;
+    wire [1:0] heart_pixel_value;                                           // Color palette index for the current pixel.
+    wire [5:0] heart_color;                                                 // Resulting color for the current pixel.
     // reg [3:0] hearts_on_screen;                                          // for testing
     localparam MAX_HEARTS = 9;                                              // maximum number of hearts
 
@@ -173,8 +173,8 @@ module vga (
     end
 
     palette_fish fish_palette (
-    .color_index(fish_pixel_value),
-    .rrggbb(fish_color)
+        .color_index(fish_pixel_value),
+        .rrggbb(fish_color)
     );
 
     wire [9:0] fish_x = pix_x - fish_pos_x;                                          
@@ -199,7 +199,7 @@ module vga (
     localparam CAT_HEIGHT = MEM_CAT_HEIGHT * CAT_STRETCH_FACTOR;            // Height of the cat after stretching
 
     wire [1:0] cat_pixel_value;
-    wire [5:0] cat_color;
+    wire [5:0] default_cat_color;
 
     reg [1:0] cat[0:MEM_CAT_WIDTH*MEM_CAT_HEIGHT-1];                        // currently 23*25 = 575 pixels --> 10 bit addresses
     initial begin
@@ -207,15 +207,13 @@ module vga (
     end
 
     palette_cat cat_palette (
-    .color_index(cat_pixel_value),
-    .rrggbb(cat_color)
+        .color_index(cat_pixel_value),
+        .rrggbb(default_cat_color)
     );
 
-    reg [9:0] cat_left, cat_top;                                            // position of the cat decided by bouncing logic
-
-    wire [9:0] cat_x = pix_x - cat_left;
-    wire [9:0] cat_y = pix_y - cat_top;
-    wire cat_pixels = cat_x < CAT_WIDTH && cat_y < CAT_HEIGHT;
+    wire [9:0] cat_x = pix_x - cat_pos_x;
+    wire [9:0] cat_y = pix_y - cat_pos_y;
+    wire default_cat_pixels = cat_x < CAT_WIDTH && cat_y < CAT_HEIGHT;
         // should be fine for stretch factor <= 2, for higher stretch factors, change x[9:6] to x[9:7] etc... (ook bij addr berekening hieronder)
 
     // addr = (y / stretch_factor) * MEM_CAT_WIDTH + (x / strech_factor) 
@@ -223,6 +221,155 @@ module vga (
     wire [9:0] cat_addr = (cat_y >> CAT_STRETCH_EXP) * MEM_CAT_WIDTH + (cat_x >> CAT_STRETCH_EXP); 
 
     assign cat_pixel_value = cat[cat_addr];
+
+
+    // ------------------------------------------------- Changeable eyes ------------------------------------------------------------
+
+    localparam MEM_EYE_WIDTH = 4;                                          // Width of one cat eye in cat_sleep_eye.hex or cat_dead_eye.hex
+    localparam MEM_EYE_HEIGHT = 4;                                         // Height of one cat eye in cat_sleep_eye.hex or cat_dead_eye.hex
+
+    localparam EYE_WIDTH = MEM_EYE_WIDTH * CAT_STRETCH_FACTOR;
+    localparam EYE_HEIGHT = MEM_EYE_HEIGHT * CAT_STRETCH_FACTOR;
+
+    wire dead_eye_pixel_value, sleep_eye_pixel_value, eye_pixel_value;
+    wire [5:0] eye_color;
+
+    wire is_left_eye = cat_x >= 5 & cat_x <= 8 & cat_y >= 6 & cat_y <= 9;
+    wire is_right_eye = cat_x >= 14 & cat_x <= 17 & cat_y >= 6 & cat_y <= 9;
+    wire is_eye = is_left_eye | is_right_eye;
+
+    wire [9:0] eye_x = is_left_eye ? cat_x - 5 : cat_x - 14;
+    wire [9:0] eye_y = cat_y - 6;
+
+    reg dead_eye[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
+    reg sleep_eye[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
+    initial begin
+        $readmemh("../src/data/cat_dead_eye.hex", dead_eye);
+        $readmemh("../src/data/cat_sleep_eye.hex", sleep_eye);
+    end
+
+    wire [9:0] eye_addr = (eye_y >> CAT_STRETCH_EXP) * MEM_EYE_WIDTH + (eye_x >> CAT_STRETCH_EXP); 
+    assign dead_eye_pixel_value = dead_eye[eye_addr];
+    assign sleep_eye_pixel_value = sleep_eye[eye_addr];
+    assign eye_pixel_value = is_dead ? dead_eye_pixel_value : sleep_eye_pixel_value;
+
+    palette_eyes eyes_palette (
+        .color_index(eye_pixel_value),
+        .rrggbb(eye_color)
+    );
+
+
+    // ------------------------------------------------- Changeable ears ------------------------------------------------------------
+
+    localparam MEM_EAR_WIDTH = 5;                                          // Width of one cat ear in cat_raised_ear.hex
+    localparam MEM_EAR_HEIGHT = 8;                                         // Height of one cat ear in cat_raised_ear.hex
+
+    localparam EAR_WIDTH = MEM_EAR_WIDTH * CAT_STRETCH_FACTOR;
+    localparam EAR_HEIGHT = MEM_EAR_HEIGHT * CAT_STRETCH_FACTOR;
+
+    wire [1:0] raised_ear_pixel_value;
+    wire [5:0] raised_ear_color;
+
+    wire is_raised_ear_left = cat_x >= 0 & cat_x <= 4 & (cat_y >= 0 || cat_y == -1) & cat_y <= 6;
+    wire is_raised_ear_right = cat_x >= 18 & cat_x <= 22 & (cat_y >= 0 || cat_y == -1) & cat_y <= 6;
+    wire is_raised_ear = is_raised_ear_left | is_raised_ear_right;
+
+    wire [9:0] ear_x = is_raised_ear_left ? cat_x : MEM_EAR_WIDTH - (cat_x - 18) + 1; // Right ear should be mirrorred.
+    wire [9:0] ear_y = cat_y + 1;
+
+    reg [1:0] raised_ear[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
+    initial begin
+        $readmemh("../src/data/cat_raised_ear.hex", raised_ear);
+    end
+
+    wire [9:0] ear_addr = (ear_y >> CAT_STRETCH_EXP) * MEM_EAR_WIDTH + (ear_x >> CAT_STRETCH_EXP); 
+    assign raised_ear_pixel_value = raised_ear[ear_addr];
+
+    // The ears use the same color as the cat.
+    palette_cat ears_palette (
+        .color_index(raised_ear_pixel_value),
+        .rrggbb(raised_ear_color)
+    );
+
+    
+    // ----------------------------------------------- Combine into one cat ---------------------------------------------------------
+
+    reg [5:0] cat_color;
+    always @(*) begin
+        // If there is a reason to change the ears, change them.
+        // If there is a reason to show 'zzzz', do it.
+        if ((is_dead | is_sleeping) & is_eye) begin
+            // If there is a reason to change the eyes, change them.
+            cat_color = eye_color;
+        end else if (is_raised_ear_left) begin
+            // If there is a reason to change the ears, change them.
+            cat_color = raised_ear_color;
+        end else begin
+            // Default behavior is to show the default cat.
+            cat_color = default_cat_color;
+        end
+    end
+    wire cat_pixels = default_cat_pixels | is_raised_ear_left;
+
+    // ------------------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------ zzz logic -------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------------------------
+
+    localparam FIRST_Z_X_OFFSET = 32;
+    localparam FIRST_Z_Y_OFFSET = -8;
+    localparam Z_COUNT = 4;
+    localparam INTER_Z_X_OFFSET = 4;
+    localparam INTER_Z_Y_OFFSET = 5;
+    
+    localparam MEM_Z_WIDTH = 4;                                          // Width of the 'z' glyph in z.hex
+    localparam MEM_Z_HEIGHT = 5;                                         // Height of the 'z' glyph in z.hex
+
+    localparam Z_STRETCH_EXP = 1;                                         // 0 = no stretching (i.e. stretch factor 1), 1 = stretch factor 2, 2 = stretch factor 4
+    localparam Z_STRETCH_FACTOR = 1 << Z_STRETCH_EXP;                   // Calculate the stretch factor based on the exponent
+
+    localparam Z_WIDTH = MEM_Z_WIDTH * Z_STRETCH_FACTOR;
+    localparam Z_HEIGHT = MEM_Z_HEIGHT * Z_STRETCH_FACTOR;
+
+    wire z_pixel_value;
+    wire [5:0] z_color;
+
+    reg z_registers[0:MEM_Z_WIDTH*MEM_Z_HEIGHT-1];                          // currently 23*25 = 575 pixels --> 10 bit addresses
+    initial begin
+        $readmemh("../src/data/z.hex", z_registers);
+    end
+
+    palette_z z_palette (
+        .color_index(z_pixel_value),
+        .rrggbb(z_color)
+    );
+
+    wire is_z_array[0:Z_COUNT-1];                                           // bit i stores if the current pixel is part of the i'th Z.
+    wire is_z_concat[0:Z_COUNT-1];
+    wire [9:0] z_x_array[0:Z_COUNT-1];
+    wire [9:0] z_y_array[0:Z_COUNT-1];
+    genvar i;
+    generate
+        for (i = 0; i < Z_COUNT; i = i + 1) begin : gen_z_loop
+            assign is_z_array[i] = cat_x >= FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i
+                                    & cat_x <= FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i + Z_WIDTH
+                                    & cat_y >= FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i
+                                    & cat_y <= FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i + Z_HEIGHT;
+            
+            assign is_z_concat[i] = i == 0 ? is_z_array[i] : is_z_array[i] | is_z_concat[i-1];
+
+            assign z_x_array[i] = is_z_array[i] ? cat_x - (FIRST_Z_X_OFFSET + INTER_Z_X_OFFSET * i) : (i == 0 ? 9'b0 : z_x_array[i-1]);
+            assign z_y_array[i] = is_z_array[i] ?  cat_y - (FIRST_Z_Y_OFFSET + INTER_Z_Y_OFFSET * i) : (i == 0 ? 9'b0 : z_y_array[i-1]);
+        end
+    endgenerate
+
+
+    wire [9:0] z_x = z_x_array[Z_COUNT-1];
+    wire [9:0] z_y = z_y_array[Z_COUNT-1];
+    wire z_pixels = is_z_concat[Z_COUNT-1]; // Is this pixel in any 'z' glyph?
+    
+    wire [9:0] z_addr = (z_y >> Z_STRETCH_EXP) * MEM_Z_WIDTH + (z_x >> Z_STRETCH_EXP); 
+
+    assign z_pixel_value = z_registers[z_addr];
 
 
     // ------------------------------------------------ Bouncing cat logic ----------------------------------------------------------
@@ -262,7 +409,7 @@ module vga (
     // ------------------------------------------------ Walking cat logic -----------------------------------------------------------
 
     // used in default state
-
+    /*
     reg first_frame = 1;
 
     reg dir_x, dir_y;
@@ -310,38 +457,45 @@ module vga (
             end
         end
     end
-
+    */
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ RBG output logic ------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
+    wire [5:0] BACKGROUND_COLOR= 6'b101011;
     always @(posedge clk) begin
         if (~rst_n) begin
             R <= 0;
             G <= 0;
             B <= 0;
         end else begin
-            R <= 2'b10;                                                     // default output is background c_: light purple
-            G <= 2'b10;
-            B <= 2'b11;
+            R <= BACKGROUND_COLOR[5:4];                                                     // default output is background c_: light purple
+            G <= BACKGROUND_COLOR[3:2];
+            B <= BACKGROUND_COLOR[1:0];
             if (video_active) begin
-                if (cat_pixels) begin
-                    R <= cat_color[5:4];
-                    G <= cat_color[3:2];
-                    B <= cat_color[1:0];
-                end else if (heart_pixels) begin
+                // The order of the if statements defines the rendering order.
+                // By checking if an appropriate color is not the background color, we do not get rectangles in the background color cutting through items in lower rendering layers.
+                if (heart_pixels & heart_color != BACKGROUND_COLOR) begin
                     R <= heart_color[5:4];
                     G <= heart_color[3:2];
                     B <= heart_color[1:0];
-                end else if (fish_pixels && is_eating) begin
-                    R <= fish_color[5:4];
-                    G <= fish_color[3:2];
-                    B <= fish_color[1:0];
-                end else if (batt_pixels) begin
+                end else if (batt_pixels) begin // Rectangular sprite, should not have any transparent components.
                     R <= batt_color[5:4];
                     G <= batt_color[3:2];
                     B <= batt_color[1:0];
+                end else if (z_pixels & is_sleeping & z_color != BACKGROUND_COLOR) begin
+                    R <= z_color[5:4];
+                    G <= z_color[3:2];
+                    B <= z_color[1:0];
+                end else if (cat_pixels & cat_color != BACKGROUND_COLOR) begin
+                    R <= cat_color[5:4];
+                    G <= cat_color[3:2];
+                    B <= cat_color[1:0];
+                end else if (fish_pixels && is_eating & fish_color != BACKGROUND_COLOR) begin
+                    R <= fish_color[5:4];
+                    G <= fish_color[3:2];
+                    B <= fish_color[1:0];
                 end
             end
         end
