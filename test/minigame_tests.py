@@ -7,14 +7,13 @@ from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge, Timer
 from cocotb.handle import Force, Release
 
 logger = logging.getLogger("important notes")
-logger.warning("These tests assume the default parameters are used, e.g. FISH_WIDTH = FISH_HEIGHT = 16, \nCAT_WIDTH = CAT_HEIGHT = 32 and DEFAULT_X = 120, DEFAULT_Y = 300. \nThey also assume the cat's / fish's position is treated as the coordinate of it's upper left corner.")
+logger.warning("These tests assume the default parameters are used, e.g. FISH_WIDTH = 16*2, FISH_HEIGHT = 10*2, \nCAT_WIDTH = 23*2, CAT_HEIGHT = 25*2 and DEFAULT_X = 120, DEFAULT_Y = 300. \nThey also assume the cat's / fish's position is treated as the coordinate of it's upper left corner.")
 
 
 """
 Performs a reset
 """
 async def reset(dut):
-
     await RisingEdge(dut.clk)
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 1)
@@ -101,7 +100,6 @@ async def test_reset(dut):
 
     dut.rst_n.value = 1  
 
-    
 
 @cocotb.test()
 async def test_not_caught1(dut):
@@ -125,12 +123,13 @@ async def test_not_caught2(dut):
 
     # Case 2: vis steekt 1 pixel uit langs rechts
     await RisingEdge(dut.clk)                           # change inputs on rising edge
-    dut.cat_pos_x.value = 103  
+    dut.cat_pos_x.value = 105  
     dut.cat_pos_y.value = 300
     
     await ClockCycles(dut.clk, 1)
     await FallingEdge(dut.clk) 
     assert dut.fish_caught.value == 0
+
 
 @cocotb.test()
 async def test_not_caught3(dut):
@@ -153,7 +152,7 @@ async def test_not_caught4(dut):
     # Case 4: vis steekt 1 pixel uit langs onder
     await RisingEdge(dut.clk)
     dut.cat_pos_x.value = 120
-    dut.cat_pos_y.value = 283
+    dut.cat_pos_y.value = 269
     
     await ClockCycles(dut.clk, 1)
     await FallingEdge(dut.clk)
@@ -184,9 +183,10 @@ async def test_caught1(dut):
     dut.cat_pos_x.value = 115
     dut.cat_pos_y.value = 295
 
-    await ClockCycles(dut.clk, 1)
+    # await ClockCycles(dut.clk, 1)
     await FallingEdge(dut.clk)              
     assert dut.fish_caught.value == 1
+
 
 @cocotb.test()
 async def test_caught2(dut):
@@ -194,10 +194,10 @@ async def test_caught2(dut):
 
     # Case 2: vis net binnen grens langs rechts
     await RisingEdge(dut.clk)
-    dut.cat_pos_x.value = 104 
+    dut.cat_pos_x.value = 106
     dut.cat_pos_y.value = 300
 
-    await ClockCycles(dut.clk, 1)
+    # await ClockCycles(dut.clk, 1)
     await FallingEdge(dut.clk)
     assert dut.fish_caught.value == 1
 
@@ -211,9 +211,10 @@ async def test_caught3(dut):
     dut.cat_pos_x.value = 120
     dut.cat_pos_y.value = 300
     
-    await ClockCycles(dut.clk, 1)
+    # await ClockCycles(dut.clk, 1)
     await FallingEdge(dut.clk)
     assert dut.fish_caught.value == 1
+
 
 @cocotb.test()
 async def test_caught4(dut):
@@ -222,11 +223,12 @@ async def test_caught4(dut):
     # Case 4: vis net binnen grens langs onder
     await RisingEdge(dut.clk)
     dut.cat_pos_x.value = 120
-    dut.cat_pos_y.value = 284
+    dut.cat_pos_y.value = 270
 
-    await ClockCycles(dut.clk, 1)
+    # await ClockCycles(dut.clk, 1)
     await FallingEdge(dut.clk)
     assert dut.fish_caught.value == 1
+
 
 @cocotb.test()
 async def test_caught5(dut):
@@ -237,7 +239,7 @@ async def test_caught5(dut):
     dut.cat_pos_x.value = 120
     dut.cat_pos_y.value = 300
 
-    await ClockCycles(dut.clk, 1)
+    # await ClockCycles(dut.clk, 1)
     await FallingEdge(dut.clk)
     assert dut.fish_caught.value == 1
 
@@ -256,7 +258,7 @@ async def test_next_position(dut):
     dut.cat_pos_x.value = 115
     dut.cat_pos_y.value = 295
 
-    await ClockCycles(dut.clk, 1)           # fish_caught goes high and fish's position change in the same cycle
+    # await ClockCycles(dut.clk, 1)           # fish_caught goes high and fish's position change in the same cycle
     await FallingEdge(dut.clk)              # give the signals some time to change
 
     # a nice random value gets outputted for the fish's position,
@@ -267,3 +269,4 @@ async def test_next_position(dut):
 
     await ClockCycles(dut.clk,1, rising=False)
     assert dut.fish_caught.value == 0 
+    

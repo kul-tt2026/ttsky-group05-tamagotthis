@@ -31,6 +31,7 @@ module tt_um_tamagotchi (
   wire gamepad_b;
   wire gamepad_x;
   wire gamepad_y;
+  wire gamepad_select; // Allows you to select certain settings.
 
   wire [9:0] cat_pos_x, cat_pos_y;
   wire [3:0] lives_left;
@@ -63,7 +64,8 @@ module tt_um_tamagotchi (
       .a(gamepad_a),
       .b(gamepad_b),
       .x(gamepad_x),
-      .y(gamepad_y)
+      .y(gamepad_y),
+      .select(gamepad_select)
   );
 
   wire timing_option; // 0: slow timing, 1: fast timing.
@@ -74,11 +76,12 @@ module tt_um_tamagotchi (
                                                   .clk(vsync),
                                                   .slow_clocks(slow_clocks));
 
-  assign clk_main_controller = slow_clocks[0];  // +- 6Hz.
-  assign clk_timer = timing_option ? slow_clocks[5 + 13] : slow_clocks[5 + 5];
+  assign clk_main_controller = vsync;  // +- 15Hz.
+  assign clk_timer = timing_option ? slow_clocks[5] : slow_clocks[5 + 6]; // 4 minutes in slow mode, 4 seconds in fast mode. 
   
   settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
                                                                              .clk(clk),
+                                                                             .change_settings(gamepad_select),
                                                                              .inputs(gamepad_a),
                                                                              .settings(timing_option));
 
@@ -93,6 +96,7 @@ module tt_um_tamagotchi (
   main_controller main_controller(
       .rst_n(rst_n),
       .clk(clk_main_controller),
+      .slow_clk(clk_timer),
       .left(gamepad_left),
       .right(gamepad_right),
       .up(gamepad_up),

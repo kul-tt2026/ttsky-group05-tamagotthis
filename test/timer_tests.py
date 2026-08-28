@@ -7,13 +7,13 @@ from cocotb.triggers import ClockCycles
 
 # This file is used to test the timer implementation independantly.
 
-SLEEP_DEPLETION_TIME = 20
-SLEEP_FURTHER_DEPLETION_TIME = 10
-PLAY_DEPLETION_TIME = 20
-PLAY_FURTHER_DEPLETION_TIME = 10
+SLEEP_DEPLETION_TIME = 30
+SLEEP_FURTHER_DEPLETION_TIME = 15
 EAT_DEPLETION_TIME = 20
 EAT_FURTHER_DEPLETION_TIME = 10
-SLOW_CLOCK_FACTOR = 4
+PLAY_DEPLETION_TIME = 15
+PLAY_FURTHER_DEPLETION_TIME = 7
+SLOW_CLOCK_FACTOR = 4 # In the testbench, the slow_clk is a factor 4 slower than the clk signal.
 
 
 async def setup_test(dut):
@@ -41,8 +41,9 @@ async def reset_test(dut):
     await setup_test(dut)
 
     # By repeatedly resetting the timer, there should never be a deplete battery signal.
+    MIN_DEPLETION_TIME = min(SLEEP_DEPLETION_TIME, EAT_DEPLETION_TIME, PLAY_DEPLETION_TIME)
     for i in range(3):
-        for j in range(int(SLEEP_DEPLETION_TIME * 3 / 4 * SLOW_CLOCK_FACTOR)):
+        for j in range(int(MIN_DEPLETION_TIME * 3 / 4 * SLOW_CLOCK_FACTOR)):
             await ClockCycles(dut.clk, 1)
             assert dut.deplete_battery.value == 0
         # Reset.

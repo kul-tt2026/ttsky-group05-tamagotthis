@@ -65,11 +65,20 @@ module tb_main_controller ();
   reg [9:0] cat_pos_x, cat_pos_y;
   reg [3:0] lives_left;
   reg [2:0] battery_left;
+  reg [1:0] slow_clks;
+
+  // Replace tt_um_example with your module name:
+  clock_divider #(.DIVIDER_MSB(1)) clock_divider (
+      .rst_n(rst_n),
+      .clk(clk),
+      .slow_clocks(slow_clks)
+  );
 
   // Replace tt_um_example with your module name:
   main_controller main_controller_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .slow_clk(slow_clks[1]),
       .left(left),
       .right(right),
       .up(up),
@@ -112,7 +121,7 @@ module tb_timer ();
 
   // Wire up the inputs and outputs:
   reg clk;
-  reg [2:0] slow_clks;
+  reg [1:0] slow_clks;
   reg rst_n;
   reg is_sleeping, caught_fish, is_playing;
   wire deplete_battery;
@@ -180,7 +189,7 @@ module tb_vga ();
   reg clk;
   reg rst_n;
   reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
-  reg is_sleeping, is_playing, is_eating, is_dead, show_bang;
+  reg is_sleeping, is_playing, is_eating, is_dead, show_bang, cat_mirrored;
   reg hsync, vsync;
   reg [1:0] R, G, B;
   reg [3:0] lives_left;
@@ -202,6 +211,7 @@ module tb_vga ();
       .show_bang(show_bang),
       .lives_left(lives_left),
       .battery_left(battery_left),
+      .cat_mirrored(cat_mirrored),
       .hsync(hsync),
       .vsync(vsync),
       .R(R),
@@ -289,6 +299,7 @@ module tb_settings_manager ();
   // Wire up the inputs and outputs:
   reg clk;
   reg rst_n;
+  reg change_settings;
   
   reg [2:0] inputs_a;
   reg [1:0] inputs_b;
@@ -300,6 +311,7 @@ module tb_settings_manager ();
   settings_manager #(.SETTINGS_COUNT(3), .OPTIONS_COUNT(2)) tb_settings_manager_a_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .change_settings(change_settings),
       .inputs(inputs_a),
       .settings(outputs_a)
   );
@@ -308,6 +320,7 @@ module tb_settings_manager ();
   settings_manager #(.SETTINGS_COUNT(2), .OPTIONS_COUNT(4)) tb_settings_manager_b_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .change_settings(change_settings),
       .inputs(inputs_b),
       .settings(outputs_b)
   );

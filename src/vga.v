@@ -18,7 +18,7 @@ module vga (
     input reg [2:0] battery_left,                                           // Necessary to display the correct battery icon
     input reg [3:0] lives_left,                                             // Necessary to display the correct number of hearts
     output hsync, vsync,                                                    // VGA horizontal and vertical sync signals, going the the VGA PMOD.
-    output reg [1:0] R, G, B,                                               // VGA color signals, going to the VGA PMOD.
+    output reg [1:0] R, G, B                                               // VGA color signals, going to the VGA PMOD.
 );
 
     localparam DISPLAY_WIDTH = 640;                                         // VGA display width
@@ -29,7 +29,8 @@ module vga (
     // ------------------------------------------------------------------------------------------------------------------------------
 
     // lfsr is a helper module to get pseudorandom bits.
-    wire [31:0] seed = 32'h1D54_EEF7;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
+    // wire [31:0] seed = 32'h1D54_EEF7;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
+    wire [31:0] seed = 32'h8000_0001;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
     wire [31:0] random;
     lfsr32 #(32,0) random_x(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(random));
 
@@ -200,7 +201,9 @@ module vga (
     // Simple timer to implement extra behaviour when sleeping.
     reg [5:0] sleep_timer;
     always @(posedge slow_clk) begin
-        if (sleep_timer == 0) begin
+        if (~rst_n) begin
+            sleep_timer <= 0;
+        end else if (sleep_timer == 0) begin
             sleep_timer <= 48;
         end else begin
             sleep_timer <= sleep_timer - 1;
@@ -315,12 +318,14 @@ module vga (
     // ----------------------------------------------- Combine into one cat ---------------------------------------------------------
 
     
+    wire left_ear_raised = is_eating;
+    wire right_ear_raised = (is_eating | (sleepy_ear_twitch != 0 & is_sleeping));
     reg [5:0] cat_color;
     reg is_blinking;
-    reg sleepy_ear_twitch;
+    reg [2:0] sleepy_ear_twitch;
     always @(posedge slow_clk) begin
         is_blinking <= random[4:0] == 0;
-        sleepy_ear_twitch <= random[4:0] == 0;
+        sleepy_ear_twitch <= sleepy_ear_twitch == 0 ? (random[6:0] == 0) * 3'b111 : sleepy_ear_twitch - 1;
     end
     always @(*) begin
         // If there is a reason to change the ears, change them.
@@ -328,10 +333,10 @@ module vga (
         if ((is_dead | is_sleeping | is_blinking) & is_eye) begin
             // If there is a reason to change the eyes, change them.
             cat_color = eye_color;
-        end else if (is_eating & is_raised_ear_left) begin
+        end else if (left_ear_raised & is_raised_ear_left) begin
             // If there is a reason to change the left ear, change it.
             cat_color = raised_ear_color;
-        end else if ((is_eating | (sleepy_ear_twitch & is_sleeping)) & is_raised_ear_right) begin
+        end else if (right_ear_raised & is_raised_ear_right) begin
             // If there is a reason to change the right ear, change it.
             cat_color = raised_ear_color;
         end  else begin
@@ -339,7 +344,7 @@ module vga (
             cat_color = default_cat_color;
         end
     end
-    wire cat_pixels = default_cat_pixels;
+    wire cat_pixels = default_cat_pixels | (is_raised_ear_left & left_ear_raised) | (is_raised_ear_right & right_ear_raised);
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ zzz logic -------------------------------------------------------------------
@@ -429,6 +434,11 @@ module vga (
             G <= BACKGROUND_COLOR[3:2];
             B <= BACKGROUND_COLOR[1:0];
             if (video_active) begin
+                // if (1) begin
+                //   R <= random[5:4];
+                //   G <= random[3:2];
+                //   B <= random[1:0];
+                // end else
                 // The order of the if statements defines the rendering order.
                 // By checking if an appropriate color is not the background color, we do not get rectangles in the background color cutting through items in lower rendering layers.
                 if (show_bang) begin

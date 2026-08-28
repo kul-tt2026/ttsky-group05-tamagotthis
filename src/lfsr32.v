@@ -25,7 +25,7 @@ module lfsr32 #(
     reg [31:0] bits;
     wire new_bit;
     
-    assign new_bit = bits[31] ^ bits[29] ^ bits[25] ^ bits[24];
+    // assign new_bit = bits[31] ^ bits[29] ^ bits[25] ^ bits[24];
 
     always@(posedge clk or negedge rst_n) begin
         if (!rst_n) begin 
@@ -34,7 +34,8 @@ module lfsr32 #(
             s2 <= 0;
         end else begin
 
-            bits <= {new_bit, bits[31:1]};
+            // bits <= {new_bit, bits[31:1]};
+            bits <= {bits[0], bits[31:1]} ^ (bits[0] * 32'h00000057);
             if (TWO_OUTPUTS == 1) begin
                 s1 <= bits[NB_OUT-1:0];   // 9:0
                 s2 <= bits[31:32-NB_OUT]; // 31:32-10 --> 31:22
@@ -42,6 +43,7 @@ module lfsr32 #(
                 s1 <= bits[NB_OUT-1:0];
                 s2 <= 0;
             end
+
 
         end 
     end 

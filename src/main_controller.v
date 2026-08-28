@@ -10,7 +10,7 @@
  *  - If a fish is caught, the cat plays or the cat sleeps, the battery increases again.
  */
 module main_controller (
-    input rst_n, clk,                                       // Global active-low reset and clock.
+    input rst_n, clk, slow_clk,                             // Global active-low reset and clock and slower clock to increase battery levels.
     input left, right, up, down, A, B, X, Y,                // Inputs from the Controller pmod.
     input deplete_battery,                                  // Signals that the battery has to drop one level.
     input fish_caught,                                      // Signals that a fish has been caught.
@@ -28,25 +28,25 @@ module main_controller (
 );
     // Parameters:
     // Number of cycles the cat is shown as dead between lives.
-    parameter DEAD_CYCLES = 30;
+    parameter DEAD_CYCLES = 45;
     // Number of cycles the bang is shown.
-    parameter RESET_CYCLES = 150;
+    parameter RESET_CYCLES = 60;
     // Number of pixels the cat moves over per button press in the eating state.
-    parameter EAT_STEP_SIZE = 2;
+    parameter EAT_STEP_SIZE = 4;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move again unless button is pressed again'.
-    parameter EAT_STEP_INTERVAL = 1;
+    parameter EAT_STEP_INTERVAL = 0;
     // Number of pixels the cat moves over per button press in the eating state.
     parameter DEFAULT_STEP_SIZE = 2;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move'.
-    parameter DEFAULT_STEP_INTERVAL = 2;
+    parameter DEFAULT_STEP_INTERVAL = 4;
     // Number of pixels the cat moves over per button press in the eating state.
-    parameter PLAY_STEP_SIZE = 2;
+    parameter PLAY_STEP_SIZE = 4;
     // Number of cycles before the cat moves again, if the button remains pressed. -1 for 'does not move'.
     parameter PLAY_STEP_INTERVAL = 0;
     // Number of cycles to sleep before the battery increases.
-    parameter SLEEP_TIME = 10;
+    parameter SLEEP_TIME = 2;
     // Number of cycles to play before the battery increases.
-    parameter PLAY_TIME = 10;
+    parameter PLAY_TIME = 1;
     // Number of fish to catch before the battery increases.
     parameter FISH_TO_CATCH = 3;
 
@@ -58,17 +58,21 @@ module main_controller (
     parameter MIN_POS_Y = 0;
     parameter MAX_POS_Y = 480-25*2;
     // The location at which the cat spawns.
-    parameter START_POS_X = 50;
-    parameter START_POS_Y = 100;
+    parameter START_POS_X = MAX_POS_X/2;
+    parameter START_POS_Y = MAX_POS_Y/2;
 
     // Number of bits of the general timer.
-    parameter TIMER_BITS = 8;
+    parameter TIMER_BITS = 6;
+    // Number of bits of the general slow timer.
+    parameter SLOW_TIMER_BITS = 2;
 
-    // General timer.
+    // General timers.
     // This timer is used for various events, and moves down. in a constant fashion.
     // Set 'set_timer' to 1 to assign the timer a certain value from 'timer_in'.
     reg [TIMER_BITS-1:0] timer, timer_in;
-    reg set_timer;
+    reg [SLOW_TIMER_BITS-1:0] slow_timer, slow_timer_in;
+    reg set_timer, set_slow_timer;
+    reg last_slow_clk; // Used to detect rising edge of slow_clk.
 
     // State machine.
     reg [2:0] State;
@@ -84,7 +88,8 @@ module main_controller (
 
     reg next_has_moved_left, next_has_moved_right, next_has_moved_up, next_has_moved_down, next_cat_mirrored, next_cat_mirrored_play;
     reg [2:0] next_state;
-    reg [3:0] next_lives, next_battery;
+    reg [3:0] next_lives;
+    reg [$clog2(MAX_BATTERY+1)-1:0] next_battery;
     reg [$clog2(FISH_TO_CATCH+1)-1:0] next_total_fish_caught;
 
     // Movement system.
@@ -96,14 +101,30 @@ module main_controller (
         if (~rst_n) begin
             State <= Bang;
             timer <= RESET_CYCLES;
-            cat_mirrored <= 0;
+            // State <= Default;
+            // cat_pos_x <= START_POS_X;
+            // cat_pos_y <= START_POS_Y;
+            // lives_left <= 9;
+            // battery_left <= MAX_BATTERY;
+            // hop_up <= 1;
+            // if (DEFAULT_STEP_INTERVAL > 0) begin
+            //     timer <= DEFAULT_STEP_INTERVAL;
+            // end
+            // cat_mirrored <= 0;
         end
         else begin
+            last_slow_clk <= slow_clk;
             if (set_timer) begin 
                 timer <= timer_in;
             end
             else begin 
                 timer <= timer - 1;
+            end
+
+            if (set_slow_timer) begin
+                slow_timer = slow_timer_in;
+            end else if (slow_clk & ~last_slow_clk) begin
+                slow_timer <= slow_timer - 1;
             end
 
             State <= next_state;
@@ -124,6 +145,7 @@ module main_controller (
     always @(*) begin
         // Default values:
         set_timer = 0;
+        set_slow_timer = 0;
         next_state = State;
         next_lives = lives_left;
         next_battery = battery_left;
@@ -137,6 +159,7 @@ module main_controller (
         next_has_moved_right = 1'bx;
         next_has_moved_up = 1'bx;
         timer_in = {TIMER_BITS{1'bx}};
+        slow_timer_in = {SLOW_TIMER_BITS{1'bx}};
         
         if (deplete_battery && State != Bang && State != Dead) begin
             next_battery = battery_left - 1;
@@ -166,14 +189,14 @@ module main_controller (
                     if (hop_up) next_cat_pos_y = cat_pos_y - 2;
                 end else if (X == 1) begin
                     next_state = Playing;
-                    set_timer = 1;
-                    timer_in = PLAY_TIME;
+                    set_slow_timer = 1;
+                    slow_timer_in = PLAY_TIME;
                     next_hop_up = 1;
                     if (hop_up) next_cat_pos_y = cat_pos_y - 2;
                 end else if (Y == 1) begin
                     next_state = Sleeping;
-                    set_timer = 1;
-                    timer_in = SLEEP_TIME;
+                    set_slow_timer = 1;
+                    slow_timer_in = SLEEP_TIME;
                     if (hop_up) next_cat_pos_y = cat_pos_y - 2;
                 end else if (A == 1) begin
                     next_state = Eating;
@@ -191,9 +214,9 @@ module main_controller (
                             next_cat_mirrored = 1;
                             next_cat_pos_x = MIN_POS_X + DEFAULT_STEP_SIZE;
                         end else if (cat_mirrored) begin
-                            next_cat_pos_x = cat_pos_x + DEFAULT_STEP_SIZE >= MAX_POS_X ? MAX_POS_X : cat_pos_x + DEFAULT_STEP_SIZE;
+                            next_cat_pos_x = cat_pos_x >= MAX_POS_X - DEFAULT_STEP_SIZE ? MAX_POS_X : cat_pos_x + DEFAULT_STEP_SIZE;
                         end else begin
-                            next_cat_pos_x = cat_pos_x - DEFAULT_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
+                            next_cat_pos_x = cat_pos_x <= MIN_POS_X + DEFAULT_STEP_SIZE ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
                         end
                         next_hop_up = !hop_up;
                         if (hop_up) next_cat_pos_y = cat_pos_y + 2;
@@ -207,14 +230,20 @@ module main_controller (
                         next_cat_mirrored = 1;
                         next_cat_pos_x = MIN_POS_X + DEFAULT_STEP_SIZE;
                     end else if (cat_mirrored) begin
-                        next_cat_pos_x = cat_pos_x + DEFAULT_STEP_SIZE >= MAX_POS_X ? MAX_POS_X : cat_pos_x + DEFAULT_STEP_SIZE;
+                        next_cat_pos_x = cat_pos_x >= MAX_POS_X - DEFAULT_STEP_SIZE ? MAX_POS_X : cat_pos_x + DEFAULT_STEP_SIZE;
                     end else begin
-                        next_cat_pos_x = cat_pos_x - DEFAULT_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
+                        next_cat_pos_x = cat_pos_x <= MIN_POS_X + DEFAULT_STEP_SIZE ? MIN_POS_X : cat_pos_x - DEFAULT_STEP_SIZE;
                     end
                 end
             end
             Eating: begin
-                if (B == 1) begin
+                if (battery_left == 0) begin
+                    next_state = Dead;
+                    next_lives = lives_left - 1;
+                    set_timer = 1;
+                    timer_in = DEAD_CYCLES;
+                end
+                else if (B == 1) begin
                     next_state = Default;
                     next_hop_up = 1;
                     if (DEFAULT_STEP_INTERVAL > 0) begin
@@ -224,85 +253,87 @@ module main_controller (
                 end
 
                 // Move buttons.
-                if (left == 1) begin
-                    next_cat_mirrored = 0;
-                    next_has_moved_left = 1;
-                    next_has_moved_right = 0;
-                    if (EAT_STEP_INTERVAL > 0) begin
-                        if ((timer == 0 || ~has_moved_left)) begin
-                            set_timer = 1;
-                            timer_in = EAT_STEP_INTERVAL;
-                            next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
+                else begin
+                    if (left == 1) begin
+                        next_cat_mirrored = 0;
+                        next_has_moved_left = 1;
+                        next_has_moved_right = 0;
+                        if (EAT_STEP_INTERVAL >= 0) begin
+                            if ((timer == 0 || ~has_moved_left)) begin
+                                set_timer = 1;
+                                timer_in = EAT_STEP_INTERVAL;
+                                next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
+                            end
+                        end else begin
+                            if (~has_moved_left) begin
+                                next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
+                            end
+                        end
+                    end else if (right == 1) begin
+                        next_cat_mirrored = 1;
+                        next_has_moved_left = 0;
+                        next_has_moved_right = 1;
+                        if (EAT_STEP_INTERVAL >= 0) begin
+                            if ((timer == 0 || ~has_moved_right)) begin
+                                set_timer = 1;
+                                timer_in = EAT_STEP_INTERVAL;
+                                next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
+                            end
+                        end else begin
+                            if (~has_moved_right) begin
+                                next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
+                            end
                         end
                     end else begin
-                        if (~has_moved_left) begin
-                            next_cat_pos_x = cat_pos_x > MIN_POS_X + EAT_STEP_SIZE ? cat_pos_x - EAT_STEP_SIZE : MIN_POS_X;
-                        end
+                        next_has_moved_left = 0;
+                        next_has_moved_right = 0;
                     end
-                end else if (right == 1) begin
-                    next_cat_mirrored = 1;
-                    next_has_moved_left = 0;
-                    next_has_moved_right = 1;
-                    if (EAT_STEP_INTERVAL > 0) begin
-                        if ((timer == 0 || ~has_moved_right)) begin
-                            set_timer = 1;
-                            timer_in = EAT_STEP_INTERVAL;
-                            next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
-                        end
-                    end else begin
-                        if (~has_moved_right) begin
-                            next_cat_pos_x = cat_pos_x < MAX_POS_X - EAT_STEP_SIZE ? cat_pos_x + EAT_STEP_SIZE : MAX_POS_X;
-                        end
-                    end
-                end else begin
-                    next_has_moved_left = 0;
-                    next_has_moved_right = 0;
-                end
-                
-                if (down == 1) begin
-                    next_has_moved_up = 0;
-                    next_has_moved_down = 1;
                     
-                    if (EAT_STEP_INTERVAL > 0) begin
-                        if ((timer == 0 || ~has_moved_down)) begin
-                            set_timer = 1;
-                            timer_in = EAT_STEP_INTERVAL;
-                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
+                    if (down == 1) begin
+                        next_has_moved_up = 0;
+                        next_has_moved_down = 1;
+                        
+                        if (EAT_STEP_INTERVAL >= 0) begin
+                            if ((timer == 0 || ~has_moved_down)) begin
+                                set_timer = 1;
+                                timer_in = EAT_STEP_INTERVAL;
+                                next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
+                            end
+                        end else begin
+                            if (~has_moved_down) begin
+                                next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
+                            end
+                        end
+                    end else if (up == 1) begin 
+                        next_has_moved_up = 1;
+                        next_has_moved_down = 0;
+                        if (EAT_STEP_INTERVAL >= 0) begin
+                            if ((timer == 0 || ~has_moved_up)) begin
+                                set_timer = 1;
+                                timer_in = EAT_STEP_INTERVAL;
+                                next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
+                            end
+                        end else begin
+                            if (~has_moved_up) begin
+                                next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
+                            end
                         end
                     end else begin
-                        if (~has_moved_down) begin
-                            next_cat_pos_y = cat_pos_y < MAX_POS_Y - EAT_STEP_SIZE ? cat_pos_y + EAT_STEP_SIZE : MAX_POS_Y;
-                        end
+                        next_has_moved_up = 0;
+                        next_has_moved_down = 0;
                     end
-                end else if (up == 1) begin 
-                    next_has_moved_up = 1;
-                    next_has_moved_down = 0;
-                    if (EAT_STEP_INTERVAL > 0) begin
-                        if ((timer == 0 || ~has_moved_up)) begin
-                            set_timer = 1;
-                            timer_in = EAT_STEP_INTERVAL;
-                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
-                        end
-                    end else begin
-                        if (~has_moved_up) begin
-                            next_cat_pos_y = cat_pos_y > MIN_POS_Y + EAT_STEP_SIZE ? cat_pos_y - EAT_STEP_SIZE : MIN_POS_Y;
-                        end
-                    end
-                end else begin
-                    next_has_moved_up = 0;
-                    next_has_moved_down = 0;
-                end
 
-                // Fish caught.
-                if (fish_caught) begin
-                    next_total_fish_caught = total_fish_caught - 1;
-                    if (next_total_fish_caught == 0) begin
-                        next_state = Default;
-                        if (DEFAULT_STEP_INTERVAL > 0) begin
-                            set_timer = 1;
-                            timer_in = DEFAULT_STEP_INTERVAL;
+                    // Fish caught.
+                    if (fish_caught) begin
+                        next_total_fish_caught = total_fish_caught - 1;
+                        if (next_total_fish_caught == 0) begin
+                            next_state = Default;
+                            if (DEFAULT_STEP_INTERVAL > 0) begin
+                                set_timer = 1;
+                                timer_in = DEFAULT_STEP_INTERVAL;
+                            end
+                            next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                         end
-                        next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
                     end
                 end
             end
@@ -321,8 +352,8 @@ module main_controller (
                     end
                 end else if (timer == 0) begin
                     next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
-                    set_timer = 1;
-                    timer_in = SLEEP_TIME;
+                    set_slow_timer = 1;
+                    slow_timer_in = SLEEP_TIME;
                 end
             end
             Playing: begin
@@ -340,8 +371,8 @@ module main_controller (
                     end
                 end else if (timer == 0) begin
                     next_battery = battery_left == MAX_BATTERY ? MAX_BATTERY : (battery_left + 1);
-                    set_timer = 1;
-                    timer_in = PLAY_TIME;
+                    set_slow_timer = 1;
+                    slow_timer_in = PLAY_TIME;
                 end
             end
             Dead: begin
@@ -393,16 +424,16 @@ module main_controller (
                         next_cat_mirrored_play = 1;
                         next_cat_pos_x_play = MIN_POS_X + PLAY_STEP_SIZE;
                     end else if (cat_mirrored) begin
-                        next_cat_pos_x_play = cat_pos_x + PLAY_STEP_SIZE >= MAX_POS_X ? MAX_POS_X : cat_pos_x + PLAY_STEP_SIZE;
+                        next_cat_pos_x_play = cat_pos_x >= MAX_POS_X - PLAY_STEP_SIZE ? MAX_POS_X : cat_pos_x + PLAY_STEP_SIZE;
                     end else begin
-                        next_cat_pos_x_play = cat_pos_x - PLAY_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - PLAY_STEP_SIZE;
+                        next_cat_pos_x_play = cat_pos_x <= MIN_POS_X + PLAY_STEP_SIZE ? MIN_POS_X : cat_pos_x - PLAY_STEP_SIZE;
                     end
                 end
             end
         end else if (PLAY_STEP_INTERVAL == 0) begin // PLAY_STEP_INTERVAL == 0: movement every tick.
             always @(*) begin
                 next_cat_mirrored_play = cat_mirrored;
-                next_hop_up = hop_up;
+                next_hop_up_play = hop_up;
 
                 if ((State == Default && X == 1) || State == Playing) begin
                     if (cat_pos_x == MAX_POS_X) begin
@@ -412,9 +443,9 @@ module main_controller (
                         next_cat_pos_x_play = MIN_POS_X + PLAY_STEP_SIZE;
                         next_cat_mirrored_play = 1;
                     end else if (cat_mirrored) begin
-                        next_cat_pos_x_play = cat_pos_x + PLAY_STEP_SIZE >= MAX_POS_X ? MAX_POS_X : cat_pos_x + PLAY_STEP_SIZE;
+                        next_cat_pos_x_play = cat_pos_x >= MAX_POS_X - PLAY_STEP_SIZE ? MAX_POS_X : cat_pos_x + PLAY_STEP_SIZE;
                     end else begin
-                        next_cat_pos_x_play = cat_pos_x - PLAY_STEP_SIZE <= MIN_POS_X ? MIN_POS_X : cat_pos_x - PLAY_STEP_SIZE;
+                        next_cat_pos_x_play = cat_pos_x <= MIN_POS_X + PLAY_STEP_SIZE ? MIN_POS_X : cat_pos_x - PLAY_STEP_SIZE;
                     end
 
                     // if (cat_pos_y == MAX_POS_Y) begin
@@ -424,7 +455,7 @@ module main_controller (
                     //     next_cat_pos_y_play = MIN_POS_Y + PLAY_STEP_SIZE;
                     //     next_hop_up = 1;
                     // end else if (hop_up) begin
-                    if (next_hop_up_play) begin
+                    if (hop_up) begin
                         next_cat_pos_y_play = cat_pos_y + PLAY_STEP_SIZE;
                         if (cat_pos_y + PLAY_STEP_SIZE >= MAX_POS_Y) begin
                           next_cat_pos_y_play = MAX_POS_Y;
@@ -439,10 +470,10 @@ module main_controller (
                         end
                     end
                 end else begin // PLAY_STEP_INTERVAL < 0: no movement.
-                    assign next_cat_pos_x_play = cat_pos_x;
-                    assign next_cat_pos_y_play = cat_pos_y;
-                    assign next_cat_mirrored_play = cat_mirrored;
-                    assign next_hop_up_play = hop_up;
+                    next_cat_pos_x_play = cat_pos_x;
+                    next_cat_pos_y_play = cat_pos_y;
+                    next_cat_mirrored_play = cat_mirrored;
+                    next_hop_up_play = hop_up;
                 end
             end
         end else begin // PLAY_STEP_INTERVAL < 0: no movement.

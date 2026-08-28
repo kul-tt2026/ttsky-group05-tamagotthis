@@ -21,12 +21,12 @@ module timer (
     // The depletion times represent the number of clock cycles that need to pass before a deplete_battery because of lack of sleep, food or play respectively.
     // If a reset signal (for example: is_sleeping) comes in in the meantime, the corresponding timer is reset to its corresponding DEPLETION_TIME.
     // If a depletion timer hits zero, a deplete_battery pulse is sent and the timer is reset to its corresponding FURTHER_DEPLETION_TIME.
-    parameter SLEEP_DEPLETION_TIME = 20;
-    parameter SLEEP_FURTHER_DEPLETION_TIME = 10;
+    parameter SLEEP_DEPLETION_TIME = 30;  // 2 hours
+    parameter SLEEP_FURTHER_DEPLETION_TIME = 15; // 1 hour
     parameter EAT_DEPLETION_TIME = 20;
     parameter EAT_FURTHER_DEPLETION_TIME = 10;
-    parameter PLAY_DEPLETION_TIME = 20;
-    parameter PLAY_FURTHER_DEPLETION_TIME = 10;
+    parameter PLAY_DEPLETION_TIME = 15;
+    parameter PLAY_FURTHER_DEPLETION_TIME = 7;
 
     reg [CLOCK_BITS-1:0] sleep_clk, eat_clk, play_clk;
 
