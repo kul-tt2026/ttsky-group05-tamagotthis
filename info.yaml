@@ -36,6 +36,16 @@ project:
     - "palette_battery.v"
     - "palette_z.v"
     - "palette_eyes.v"
+
+    - "rom_battery.v"
+    - "rom_cat_dead_eye.v"
+    - "rom_cat_sleep_eye.v"
+    - "rom_cat_raised_ear.v"
+    - "rom_hart.v"
+    - "rom_kat.v"
+    - "rom_vis.v"
+    - "rom_z.v"
+
     # - "dood.v"
     # - "bitmap_rom_kat.v"
 

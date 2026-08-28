@@ -49,10 +49,10 @@ module vga (
     // reg [3:0] hearts_on_screen;                                          // for testing
     localparam MAX_HEARTS = 9;                                              // maximum number of hearts
 
-    reg [1:0] heart[0:MEM_HEART_WIDTH*MEM_HEART_HEIGHT-1];                  // currently 15*14 = 210 pixels --> 8 bit addresses
-    initial begin
-        $readmemh("../src/data/hart.hex", heart);
-    end
+    rom_hart heart_rom (
+        .addr({2'b0, heart_addr}),
+        .value(heart_pixel_value)
+    );
 
     palette_heart heart_palette (
     .color_index(heart_pixel_value),
@@ -108,8 +108,6 @@ module vga (
     end
 
     wire [7:0] heart_addr = heart_y * MEM_HEART_WIDTH + heart_x;
-    
-    assign heart_pixel_value = heart[heart_addr];
 
 
     // ------------------------------------------------------------------------------------------------------------------------------
@@ -132,10 +130,10 @@ module vga (
     wire [2:0] batt_pixel_value;
     wire [5:0] batt_color;
 
-    reg [2:0] battery[0:MEM_BATTERY_WIDTH*MEM_BATTERY_HEIGHT-1];                    // currently 16*10 = 160 pixels --> 8 bit addresses
-    initial begin
-        $readmemh("../src/data/battery.hex", battery);
-    end
+    rom_battery battery_rom (
+        .addr({2'b0, batt_addr}),
+        .value(batt_pixel_value)
+    );
 
     palette_battery batt_palette (
         .battery_level(battery_left),
@@ -154,9 +152,6 @@ module vga (
     wire batt_pixels = (batt_x < (BATTERY_WIDTH) && batt_y < (BATTERY_HEIGHT));
 
     wire [7:0] batt_addr = (batt_y >> BATTERY_STRETCH_EXP) * MEM_BATTERY_WIDTH + (batt_x >> BATTERY_STRETCH_EXP);
-    
-    assign batt_pixel_value = battery[batt_addr];
-
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ Fish logic ------------------------------------------------------------------
@@ -176,10 +171,10 @@ module vga (
     wire [1:0] fish_pixel_value;
     wire [5:0] fish_color;
 
-    reg [1:0] fish[0:MEM_FISH_WIDTH*MEM_FISH_HEIGHT-1];                    // currently 16*10 = 160 pixels --> 8 bit addresses
-    initial begin
-        $readmemh("../src/data/vis.hex", fish);
-    end
+    rom_vis vis_rom(
+        .addr({2'b0, fish_addr}),
+        .value(fish_pixel_value)
+    );
 
     palette_fish fish_palette (
         .color_index(fish_pixel_value),
@@ -191,8 +186,6 @@ module vga (
     wire fish_pixels = (fish_x < (FISH_WIDTH) && fish_y < (FISH_HEIGHT));
 
     wire [7:0] fish_addr = (fish_y >> FISH_STRETCH_EXP) * MEM_FISH_WIDTH + (fish_x >> FISH_STRETCH_EXP);
-    
-    assign fish_pixel_value = fish[fish_addr];
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ Cat logic -------------------------------------------------------------------
@@ -222,10 +215,10 @@ module vga (
     wire [1:0] cat_pixel_value;
     wire [5:0] default_cat_color;
 
-    reg [1:0] cat[0:MEM_CAT_WIDTH*MEM_CAT_HEIGHT-1];                        // currently 23*25 = 575 pixels --> 10 bit addresses
-    initial begin
-        $readmemh("../src/data/kat.hex", cat);
-    end
+    rom_kat cat_rom(
+        .addr(cat_addr),
+        .value(cat_pixel_value)
+    );
 
     palette_cat cat_palette (
         .color_index(cat_pixel_value),
@@ -240,9 +233,6 @@ module vga (
     // addr = (y / stretch_factor) * MEM_CAT_WIDTH + (x / strech_factor) 
     // delen door strech factor (2^CAT_STRETCH_EXP) door te shiften naar rechts met CAT_STRETCH_EXP
     wire [9:0] cat_addr = (cat_y >> CAT_STRETCH_EXP) * MEM_CAT_WIDTH + ((cat_mirrored ? CAT_WIDTH - 1 - cat_x :  cat_x) >> CAT_STRETCH_EXP); 
-
-    assign cat_pixel_value = cat[cat_addr];
-
 
     // ------------------------------------------------- Changeable eyes ------------------------------------------------------------
 
@@ -262,16 +252,16 @@ module vga (
     wire [9:0] eye_x = is_left_eye ? (cat_x >> CAT_STRETCH_EXP) - 5 : (cat_x >> CAT_STRETCH_EXP) - 14;
     wire [9:0] eye_y = (cat_y >> CAT_STRETCH_EXP) - 6;
 
-    reg dead_eye[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
-    reg sleep_eye[0:MEM_EYE_WIDTH*MEM_EYE_HEIGHT-1];
-    initial begin
-        $readmemh("../src/data/cat_dead_eye.hex", dead_eye);
-        $readmemh("../src/data/cat_sleep_eye.hex", sleep_eye);
-    end
+    rom_cat_dead_eye dead_eye_rom(
+        .addr(eye_addr),
+        .value(dead_eye_pixel_value)
+    );
+    rom_cat_sleep_eye sleep_eye_rom(
+        .addr(eye_addr),
+        .value(sleep_eye_pixel_value)
+    );
 
     wire [9:0] eye_addr = eye_y * MEM_EYE_WIDTH + (is_right_eye ? 3 - eye_x : eye_x); 
-    assign dead_eye_pixel_value = dead_eye[eye_addr];
-    assign sleep_eye_pixel_value = sleep_eye[eye_addr];
     assign eye_pixel_value = is_dead ? dead_eye_pixel_value : sleep_eye_pixel_value;
 
     palette_eyes eyes_palette (
@@ -300,13 +290,12 @@ module vga (
     wire [9:0] ear_x = is_raised_ear_left ? cat_x >> CAT_STRETCH_EXP : MEM_EAR_WIDTH - 1 - ((cat_x >> CAT_STRETCH_EXP) - 17); // Right ear should be mirrorred.
     wire [9:0] ear_y = (cat_y + 1 * CAT_STRETCH_FACTOR) >> CAT_STRETCH_EXP;
 
-    reg [1:0] raised_ear[0:MEM_EAR_WIDTH*MEM_EAR_HEIGHT-1];
-    initial begin
-        $readmemh("../src/data/cat_raised_ear.hex", raised_ear);
-    end
+    rom_cat_raised_ear raised_ear_rom(
+        .addr(ear_addr),
+        .value(raised_ear_pixel_value)
+    );
 
-    wire [9:0] ear_addr = ear_y * MEM_EAR_WIDTH + ear_x; 
-    assign raised_ear_pixel_value = raised_ear[ear_addr];
+    wire [9:0] ear_addr = ear_y * MEM_EAR_WIDTH + ear_x;
 
     // The ears use the same color as the cat.
     palette_cat ears_palette (
@@ -368,10 +357,10 @@ module vga (
     wire z_pixel_value;
     wire [5:0] z_color;
 
-    reg z_registers[0:MEM_Z_WIDTH*MEM_Z_HEIGHT-1];                          // currently 23*25 = 575 pixels --> 10 bit addresses
-    initial begin
-        $readmemh("../src/data/z.hex", z_registers);
-    end
+    rom_z z_rom(
+        .addr(z_addr),
+        .value(z_pixel_value)
+    );
 
     palette_z z_palette (
         .color_index(z_pixel_value),
@@ -406,8 +395,6 @@ module vga (
     wire z_pixels = is_z_concat[Z_COUNT-1]; // Is this pixel in any 'z' glyph?
     
     wire [9:0] z_addr = (z_y >> Z_STRETCH_EXP) * MEM_Z_WIDTH + (z_x >> Z_STRETCH_EXP); 
-
-    assign z_pixel_value = z_registers[z_addr];
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------------ BANG ------------------------------------------------------------------
