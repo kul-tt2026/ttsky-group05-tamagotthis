@@ -14,8 +14,8 @@ module play_note (
   reg [18:0] counter = 0;   // Counter to keep track of how long the current phase has been going on.
 
   // dingen om de lengte van de noot te regelen
-  // localparam tenth_second = 28'd2500000;    // 1 seconde heeft 25 000 000 klokperiodes
-  localparam tenth_second = 28'd300;    // Voor simulator: 3Khz.
+  localparam tenth_second = 28'd2500000;    // 1 seconde heeft 25 000 000 klokperiodes
+  // localparam tenth_second = 28'd300;    // Voor simulator: 3Khz.
   reg [7:0] counter_pwm = 0; // Counter to output 1 and 0 at a specified PWM duty cycle.
   localparam period_pwm = 8'd255;    // pwm frequentie ong 98 kHz arbitriar gekozen
 
