@@ -56,6 +56,7 @@ module vga (
 
     palette_heart heart_palette (
     .color_index(heart_pixel_value),
+    .background_color(BACKGROUND_COLOR),
     .rrggbb(heart_color)
     );
 
@@ -178,6 +179,7 @@ module vga (
 
     palette_fish fish_palette (
         .color_index(fish_pixel_value),
+        .background_color(BACKGROUND_COLOR),
         .rrggbb(fish_color)
     );
 
@@ -222,6 +224,7 @@ module vga (
 
     palette_cat cat_palette (
         .color_index(cat_pixel_value),
+        .background_color(BACKGROUND_COLOR),
         .rrggbb(default_cat_color)
     );
 
@@ -410,7 +413,14 @@ module vga (
     // ------------------------------------------------ RBG output logic ------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
-    wire [5:0] BACKGROUND_COLOR= 6'b101011;
+    // wire [5:0] BACKGROUND_COLOR= 6'b101011;
+    wire [5:0] BACKGROUND_COLOR = 
+        is_sleeping ? 6'b000001 :                   // dark blue
+        is_playing ? 6'b111101 :                    // light yellow
+        is_eating ? 6'b011111 :                     // light blue
+        is_dead ? 6'b010000 :                       // dark red
+        6'b101011;                                  // light purple
+
     always @(posedge clk) begin
         if (~rst_n) begin
             R <= 0;

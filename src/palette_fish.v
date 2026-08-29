@@ -2,18 +2,14 @@
 
 module palette_fish (
     input  wire [1:0] color_index,
+    input  wire [5:0] background_color,
     output wire [5:0] rrggbb
 );
 
-  reg [5:0] palette[3:0];
-
-  initial begin
-    palette[0] = 6'b101011;  // fish background color: pastel purple
-    palette[1] = 6'b000000;  // black
-    palette[2] = 6'b111111;  // white
-    palette[3] = 6'b000110;  // blue
-  end
-
-  assign rrggbb = palette[color_index];
+    assign rrggbb =
+        (color_index == 2'd0) ? background_color :
+        (color_index == 2'd1) ? 6'b000000 :  // black
+        (color_index == 2'd2) ? 6'b111111 :  // white
+                                6'b000110;    // blue
 
 endmodule
