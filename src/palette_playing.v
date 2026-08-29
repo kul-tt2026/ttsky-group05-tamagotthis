@@ -6,20 +6,20 @@ module palette_playing (
 );
 
     assign rrggbb =
-        (color_index == 2'd0) ? 6'b101110 :     // light green
-        (color_index == 2'd1) ? 6'b101011 :     // light purple
-        (color_index == 2'd2) ? 6'b111010 :     // peach
-        (color_index == 2'd3) ? 6'b101111 :     // light blue
-        (color_index == 2'd4) ? 6'b111011 :     // light pink
-        (color_index == 2'd5) ? 6'b111110 :     // light yellow
-        (color_index == 2'd6) ? 6'b011010 :     // teal
-        (color_index == 2'd7) ? 6'b100110 :     // a bit darker purple
-        (color_index == 2'd8) ? 6'b101001 :     // khaki
-        (color_index == 2'd9) ? 6'b100111 :     // another purple
-        (color_index == 2'd10) ? 6'b011011 :    // a bit darker blue
-        (color_index == 2'd11) ? 6'b110110 :    // a bit darker pink
-        (color_index == 2'd12) ? 6'b111001 :    // light orange
-        (color_index == 2'd13) ? 6'b011110 :    // turquoise
-        (color_index == 2'd14) ? 6'b101101 :    // another green
+        (color_index == 0) ? 6'b101110 :     // light green
+        (color_index == 1) ? 6'b101011 :     // light purple
+        (color_index == 2) ? 6'b111010 :     // peach
+        (color_index == 3) ? 6'b101111 :     // light blue
+        (color_index == 4) ? 6'b111011 :     // light pink
+        (color_index == 5) ? 6'b111110 :     // light yellow
+        (color_index == 6) ? 6'b011010 :     // teal
+        (color_index == 7) ? 6'b100110 :     // a bit darker purple
+        (color_index == 8) ? 6'b101001 :     // khaki
+        (color_index == 9) ? 6'b100111 :     // another purple
+        (color_index == 10) ? 6'b011011 :    // a bit darker blue
+        (color_index == 11) ? 6'b110110 :    // a bit darker pink
+        (color_index == 12) ? 6'b111001 :    // light orange
+        (color_index == 13) ? 6'b011110 :    // turquoise
+        (color_index == 14) ? 6'b101101 :    // another green
         6'b101010;                              // gray
 endmodule

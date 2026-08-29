@@ -2,11 +2,11 @@
 
 module palette_z (
     input  wire color_index,
-    input wire background_color,
+    input wire [5:0] background_color,
     output wire [5:0] rrggbb
 );
 
   assign rrggbb = 
-      (color_index == 0) ? background_color : 6'b00000;
+      (color_index == 0) ? background_color : 6'b000000;
 
 endmodule

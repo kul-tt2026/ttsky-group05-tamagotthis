@@ -368,6 +368,7 @@ module vga (
 
     palette_z z_palette (
         .color_index(z_pixel_value),
+        .background_color(BACKGROUND_COLOR),
         .rrggbb(z_color)
     );
 
@@ -414,8 +415,8 @@ module vga (
     // ------------------------------------------------ RBG output logic ------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
-    wire playing_color;
-    reg [2:0] color_nb = 3'b0;
+    wire [5:0] playing_color;
+    reg [3:0] color_nb = 0;
     reg prev_playing = 0;
 
     palette_playing playing_pall(
