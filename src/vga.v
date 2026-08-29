@@ -18,7 +18,7 @@ module vga (
     input reg [2:0] battery_left,                                           // Necessary to display the correct battery icon
     input reg [3:0] lives_left,                                             // Necessary to display the correct number of hearts
     output hsync, vsync,                                                    // VGA horizontal and vertical sync signals, going the the VGA PMOD.
-    output reg [1:0] R, G, B                                               // VGA color signals, going to the VGA PMOD.
+    output reg [1:0] R, G, B                                                // VGA color signals, going to the VGA PMOD.
 );
 
     localparam DISPLAY_WIDTH = 640;                                         // VGA display width
@@ -29,8 +29,8 @@ module vga (
     // ------------------------------------------------------------------------------------------------------------------------------
 
     // lfsr is a helper module to get pseudorandom bits.
-    // wire [31:0] seed = 32'h1D54_EEF7;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
-    wire [31:0] seed = 32'h8000_0001;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
+    // wire [31:0] seed = 32'h1D54_EEF7;
+    wire [31:0] seed = 32'h8000_0001;
     wire [31:0] random;
     lfsr32 #(32,0) random_x(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(random));
 
@@ -142,7 +142,7 @@ module vga (
         .rrggbb(batt_color)
     );
 
-    //     palette_battery batt_palette (                                          // for testing
+    //     palette_battery batt_palette (                                   // for testing
     //     .battery_level(battery_level),
     //     .color_index(batt_pixel_value),
     //     .rrggbb(batt_color)
@@ -303,6 +303,7 @@ module vga (
     // The ears use the same color as the cat.
     palette_cat ears_palette (
         .color_index(raised_ear_pixel_value),
+        .background_color(BACKGROUND_COLOR),
         .rrggbb(raised_ear_color)
     );
 
@@ -342,10 +343,10 @@ module vga (
     // ------------------------------------------------ zzz logic -------------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
-    localparam MEM_Z_WIDTH = 4;                                          // Width of the 'z' glyph in z.hex
-    localparam MEM_Z_HEIGHT = 5;                                         // Height of the 'z' glyph in z.hex
+    localparam MEM_Z_WIDTH = 4;                                         // Width of the 'z' glyph in z.hex
+    localparam MEM_Z_HEIGHT = 5;                                        // Height of the 'z' glyph in z.hex
 
-    localparam Z_STRETCH_EXP = 1;                                         // 0 = no stretching (i.e. stretch factor 1), 1 = stretch factor 2, 2 = stretch factor 4
+    localparam Z_STRETCH_EXP = 1;                                       // 0 = no stretching (i.e. stretch factor 1), 1 = stretch factor 2, 2 = stretch factor 4
     localparam Z_STRETCH_FACTOR = 1 << Z_STRETCH_EXP;                   // Calculate the stretch factor based on the exponent
 
     localparam Z_WIDTH = MEM_Z_WIDTH * Z_STRETCH_FACTOR;
@@ -370,7 +371,7 @@ module vga (
         .rrggbb(z_color)
     );
 
-    wire [Z_COUNT-1:0] is_z_array;                                           // bit i stores if the current pixel is part of the i'th Z.
+    wire [Z_COUNT-1:0] is_z_array;                                      // bit i stores if the current pixel is part of the i'th Z.
     wire [Z_COUNT-1:0] is_z_concat;
     wire [9:0] z_x_array[0:Z_COUNT-1];
     wire [9:0] z_y_array[0:Z_COUNT-1];
@@ -395,7 +396,7 @@ module vga (
 
     wire [9:0] z_x = z_x_array[Z_COUNT-1];
     wire [9:0] z_y = z_y_array[Z_COUNT-1];
-    wire z_pixels = is_z_concat[Z_COUNT-1]; // Is this pixel in any 'z' glyph?
+    wire z_pixels = is_z_concat[Z_COUNT-1];                             // Is this pixel in any 'z' glyph?
     
     wire [9:0] z_addr = (z_y >> Z_STRETCH_EXP) * MEM_Z_WIDTH + (z_x >> Z_STRETCH_EXP); 
 
@@ -413,10 +414,18 @@ module vga (
     // ------------------------------------------------ RBG output logic ------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
-    // wire [5:0] BACKGROUND_COLOR= 6'b101011;
+    wire playing_color;
+    reg [2:0] color_nb = 3'b0;
+    reg prev_playing = 0;
+
+    palette_playing playing_pall(
+        .color_index(color_nb),
+        .rrggbb(playing_color)
+    );
+
     wire [5:0] BACKGROUND_COLOR = 
         is_sleeping ? 6'b000001 :                   // dark blue
-        is_playing ? 6'b111101 :                    // light yellow
+        is_playing ? playing_color :                // cycles through 16 colors
         is_eating ? 6'b011111 :                     // light blue
         is_dead ? 6'b010000 :                       // dark red
         6'b101011;                                  // light purple
@@ -427,7 +436,14 @@ module vga (
             G <= 0;
             B <= 0;
         end else begin
-            R <= BACKGROUND_COLOR[5:4];                                                     // default output is background c_: light purple
+            if (is_playing && !prev_playing) begin
+                color_nb <= color_nb + 1;                       // goes from 15 to 0 due to overflow
+                prev_playing <= 1;
+            end else if (!is_playing && prev_playing) begin
+                prev_playing <= 0;
+            end
+
+            R <= BACKGROUND_COLOR[5:4];
             G <= BACKGROUND_COLOR[3:2];
             B <= BACKGROUND_COLOR[1:0];
             if (video_active) begin
@@ -446,7 +462,7 @@ module vga (
                     R <= heart_color[5:4];
                     G <= heart_color[3:2];
                     B <= heart_color[1:0];
-                end else if (batt_pixels) begin // Rectangular sprite, should not have any transparent components.
+                end else if (batt_pixels) begin         // Rectangular sprite, should not have any transparent components.
                     R <= batt_color[5:4];
                     G <= batt_color[3:2];
                     B <= batt_color[1:0];

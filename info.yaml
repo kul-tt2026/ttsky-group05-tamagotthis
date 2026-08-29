@@ -36,6 +36,7 @@ project:
     - "palette_battery.v"
     - "palette_z.v"
     - "palette_eyes.v"
+    - "palette_playing.v"
 
     - "rom_battery.v"
     - "rom_cat_dead_eye.v"

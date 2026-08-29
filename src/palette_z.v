@@ -2,16 +2,11 @@
 
 module palette_z (
     input  wire color_index,
+    input wire background_color,
     output wire [5:0] rrggbb
 );
 
-  reg [5:0] palette[3:0];
-
-  initial begin
-    palette[0] = 6'b101011;  // background color: pastel purple
-    palette[1] = 6'b000000;  // black
-  end
-
-  assign rrggbb = palette[color_index];
+  assign rrggbb = 
+      (color_index == 0) ? background_color : 6'b00000;
 
 endmodule
