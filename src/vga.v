@@ -195,7 +195,7 @@ module vga (
 
     // Simple timer to implement extra behaviour when sleeping.
     reg [5:0] sleep_timer;
-    always @(posedge slow_clk) begin
+    always @(posedge slow_clk or negedge rst_n) begin
         if (~rst_n) begin
             sleep_timer <= 0;
         end else if (sleep_timer == 0) begin
@@ -321,8 +321,8 @@ module vga (
             is_blinking <= 0;
             sleepy_ear_twitch <= 0;
         end else begin
-        is_blinking <= random[4:0] == 0;
-        sleepy_ear_twitch <= sleepy_ear_twitch == 0 ? (random[6:0] == 0) * 3'b111 : sleepy_ear_twitch - 1;
+            is_blinking <= random[4:0] == 0;
+            sleepy_ear_twitch <= sleepy_ear_twitch == 0 ? (random[6:0] == 0) * 3'b111 : sleepy_ear_twitch - 1;
         end
     end
     always @(*) begin
@@ -373,6 +373,7 @@ module vga (
 
     palette_z z_palette (
         .color_index(z_pixel_value),
+        .background_color(BACKGROUND_COLOR),
         .rrggbb(z_color)
     );
 

@@ -102,6 +102,8 @@ module main_controller (
             State <= Bang;
             timer <= RESET_CYCLES;
             // State <= Default;
+            // total_fish_caught <= FISH_TO_CATCH;
+            // slow_timer <= SLEEP_TIME;
             cat_pos_x <= START_POS_X;
             cat_pos_y <= START_POS_Y;
             lives_left <= 9;
