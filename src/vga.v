@@ -154,6 +154,111 @@ module vga (
 
     wire [7:0] batt_addr = (batt_y >> BATTERY_STRETCH_EXP) * MEM_BATTERY_WIDTH + (batt_x >> BATTERY_STRETCH_EXP);
 
+
+    // ------------------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------ Star logic ------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------------------------
+
+    // putting a few stars
+    localparam MEM_STAR_WIDTH = 5;                                         // Width of the star in star.hex
+    localparam MEM_STAR_HEIGHT = 5;                                        // Height of the star in star.hex
+
+    localparam STAR_STRETCH_EXP = 1;                                       // 0 = no stretching (i.e. stretch factor 1), 1 = stretch factor 2, 2 = stretch factor 4
+    localparam STAR_STRETCH_FACTOR = 1 << STAR_STRETCH_EXP;                // Calculate the stretch factor based on the exponent
+
+    localparam STAR_WIDTH = MEM_STAR_WIDTH * STAR_STRETCH_FACTOR;
+    localparam STAR_HEIGHT = MEM_STAR_HEIGHT * STAR_STRETCH_FACTOR;
+
+    localparam STAR_COUNT = 6;
+
+    reg [9:0] star_pos_x [0:STAR_COUNT-1];
+    reg [9:0] star_pos_y [0:STAR_COUNT-1];
+    wire [31:0] star_rand [0:STAR_COUNT-1];
+
+    genvar star_idx;
+    generate
+        for (star_idx = 0; star_idx < STAR_COUNT; star_idx = star_idx + 1) begin : gen_star_rngs
+            lfsr32 #(32,0) star_rng_inst (
+                .seed(32'h1000_1001 + star_idx),
+                .clk(clk),
+                .rst_n(rst_n),
+                .s1(star_rand[star_idx])
+            );
+        end
+    endgenerate
+
+    wire [9:0] star_x_array [0:STAR_COUNT-1];
+    wire [9:0] star_y_array [0:STAR_COUNT-1];
+    wire [9:0] star_addr_array [0:STAR_COUNT-1];
+    wire [1:0] star_pixel_value_array [0:STAR_COUNT-1];
+    wire [STAR_COUNT-1:0] star_valid_array;
+    reg [1:0] star_pixel_value;
+    reg star_pixels;
+    integer star_i;
+
+    always @(posedge clk) begin
+        if (~rst_n) begin
+            for (star_i = 0; star_i < STAR_COUNT; star_i = star_i + 1) begin
+                star_pos_x[star_i] <= 10'd0;
+                star_pos_y[star_i] <= 10'd0;
+            end
+        end else if (sleep_timer == 0) begin
+            for (star_i = 0; star_i < STAR_COUNT; star_i = star_i + 1) begin
+                reg [10:0] x_candidate;
+                reg [9:0] y_candidate;
+
+                x_candidate = ({1'b0, star_rand[star_i][8:0]} + {1'b0, star_rand[star_i][6:0]});
+                if (x_candidate > 11'd625) begin
+                    x_candidate = 11'd625;
+                end
+
+                y_candidate = {3'b0, star_rand[star_i][15:9]};
+                if (y_candidate > 10'd420) begin
+                    y_candidate = 10'd420;
+                end
+
+                star_pos_x[star_i] <= x_candidate[9:0];
+                star_pos_y[star_i] <= y_candidate;
+            end
+        end
+    end
+
+    generate
+        for (star_idx = 0; star_idx < STAR_COUNT; star_idx = star_idx + 1) begin : gen_star_pixels
+            assign star_x_array[star_idx] = pix_x - star_pos_x[star_idx];
+            assign star_y_array[star_idx] = pix_y - star_pos_y[star_idx];
+            assign star_valid_array[star_idx] = (star_x_array[star_idx] < STAR_WIDTH)
+                                            & (star_y_array[star_idx] < STAR_HEIGHT);
+            assign star_addr_array[star_idx] = (star_y_array[star_idx] >> STAR_STRETCH_EXP) * MEM_STAR_WIDTH
+                                            + (star_x_array[star_idx] >> STAR_STRETCH_EXP);
+
+            rom_star star_rom_inst(
+                .addr(star_addr_array[star_idx]),
+                .value(star_pixel_value_array[star_idx])
+            );
+        end
+    endgenerate
+
+    always @(*) begin
+        star_pixels = 1'b0;
+        star_pixel_value = 2'b0;
+        for (star_i = 0; star_i < STAR_COUNT; star_i = star_i + 1) begin
+            if (star_valid_array[star_i]) begin
+                star_pixels = 1'b1;
+                star_pixel_value = star_pixel_value_array[star_i];
+            end
+        end
+    end
+
+    wire [5:0] star_color;
+
+    palette_star star_palette(
+        .color_index(star_pixel_value),
+        .background_color(BACKGROUND_COLOR),
+        .rrggbb(star_color)
+    );
+
+
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ Fish logic ------------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
@@ -471,6 +576,10 @@ module vga (
                     R <= z_color[5:4];
                     G <= z_color[3:2];
                     B <= z_color[1:0];
+                end else if (star_pixels & is_sleeping) begin
+                    R <= star_color[5:4];
+                    G <= star_color[3:2];
+                    B <= star_color[1:0];
                 end else if (cat_pixels & cat_color != BACKGROUND_COLOR) begin
                     R <= cat_color[5:4];
                     G <= cat_color[3:2];
