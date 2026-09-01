@@ -61,14 +61,24 @@ module tb_main_controller ();
   reg rst_n, clk;
   reg left, right, up, down, A, B, X, Y;
   reg is_sleeping, fish_caught, is_playing, is_dead, is_eating, show_bang, deplete_battery, battery_almost_empty;
-  reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping;
+  reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping, cat_mirrored;
   reg [9:0] cat_pos_x, cat_pos_y;
-  reg [3:0] lives_left, battery_left;
+  reg [3:0] lives_left;
+  reg [2:0] battery_left;
+  reg [1:0] slow_clks;
+
+  // Replace tt_um_example with your module name:
+  clock_divider #(.DIVIDER_MSB(1)) clock_divider (
+      .rst_n(rst_n),
+      .clk(clk),
+      .slow_clocks(slow_clks)
+  );
 
   // Replace tt_um_example with your module name:
   main_controller main_controller_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .slow_clk(slow_clks[1]),
       .left(left),
       .right(right),
       .up(up),
@@ -93,6 +103,7 @@ module tb_main_controller ();
       .battery_almost_empty(battery_almost_empty),
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
+      .cat_mirrored(cat_mirrored),
       .lives_left(lives_left),
       .battery_left(battery_left)
   );
@@ -110,7 +121,7 @@ module tb_timer ();
 
   // Wire up the inputs and outputs:
   reg clk;
-  reg [2:0] slow_clks;
+  reg [1:0] slow_clks;
   reg rst_n;
   reg is_sleeping, caught_fish, is_playing;
   wire deplete_battery;
@@ -150,18 +161,18 @@ module tb_audio ();
   reg fish_caught, play_bang, play_default, play_sleeping, play_playing, play_dead, battery_almost_empty, audio_out;
 
   // Replace tt_um_example with your module name:
-  audio audio_dut (
-      .rst_n(rst_n),
-      .clk(clk),
-      .fish_caught(fish_caught),
-      .play_bang(play_bang),
-      .play_default(play_default),
-      .play_sleeping(play_sleeping),
-      .play_playing(play_playing),
-      .play_dead(play_dead),
-      .battery_almost_empty(battery_almost_empty),
-      .audio_out(audio_out)
-  );
+  // audio audio_dut (
+  //     .rst_n(rst_n),
+  //     .clk(clk),
+  //     .fish_caught(fish_caught),
+  //     .play_bang(play_bang),
+  //     .play_default(play_default),
+  //     .play_sleeping(play_sleeping),
+  //     .play_playing(play_playing),
+  //     .play_dead(play_dead),
+  //     .battery_almost_empty(battery_almost_empty),
+  //     .audio_out(audio_out)
+  // );
 
 endmodule
 
@@ -178,9 +189,12 @@ module tb_vga ();
   reg clk;
   reg rst_n;
   reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
-  reg is_sleeping, is_playing, is_eating, is_dead, show_bang;
+  reg is_sleeping, is_playing, is_eating, is_dead, show_bang, cat_mirrored;
   reg hsync, vsync;
   reg [1:0] R, G, B;
+  reg [3:0] lives_left;
+  reg [2:0] battery_left;
+  reg [7:0] uo_out;
 
   // Replace tt_um_example with your module name:
   vga vga_dut (
@@ -195,12 +209,17 @@ module tb_vga ();
       .is_eating(is_eating),
       .is_dead(is_dead),
       .show_bang(show_bang),
+      .lives_left(lives_left),
+      .battery_left(battery_left),
+      .cat_mirrored(cat_mirrored),
       .hsync(hsync),
       .vsync(vsync),
       .R(R),
       .G(G),
       .B(B)
   );
+
+  assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
 
 endmodule
 
@@ -225,15 +244,16 @@ module tb_minigame ();
       .rst_n(rst_n),
       .clk(clk),
       .clk2(clk2),
+      .is_eating(is_eating),
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
       .fish_pos_x(fish_pos_x),
       .fish_pos_y(fish_pos_y),
-      .fish_caught(fish_caught),
-      .is_eating(is_eating)
+      .fish_caught(fish_caught)
   );
 
 endmodule
+
 
 module tb_clock_divider ();
 
@@ -279,6 +299,7 @@ module tb_settings_manager ();
   // Wire up the inputs and outputs:
   reg clk;
   reg rst_n;
+  reg change_settings;
   
   reg [2:0] inputs_a;
   reg [1:0] inputs_b;
@@ -290,6 +311,7 @@ module tb_settings_manager ();
   settings_manager #(.SETTINGS_COUNT(3), .OPTIONS_COUNT(2)) tb_settings_manager_a_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .change_settings(change_settings),
       .inputs(inputs_a),
       .settings(outputs_a)
   );
@@ -298,8 +320,136 @@ module tb_settings_manager ();
   settings_manager #(.SETTINGS_COUNT(2), .OPTIONS_COUNT(4)) tb_settings_manager_b_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .change_settings(change_settings),
       .inputs(inputs_b),
       .settings(outputs_b)
+  );
+
+endmodule
+
+module tb_lfsr32 ();
+
+  initial begin
+    $dumpfile("tb_lfsr32.fst");
+    $dumpvars(0,tb_lfsr32);
+    #1;
+  end
+
+  reg clk;
+  reg rst_n;
+  reg [31:0] seed;
+  reg [9:0] s1, s2;
+
+  lfsr32 lfsr_dut (
+    .clk(clk),
+    .rst_n(rst_n),
+    .seed(seed),
+    .s1(s1),
+    .s2(s2)
+  );
+endmodule
+
+module tb_simulator ();
+
+  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb_simulator.fst");
+    $dumpvars(0, tb_simulator);
+    #1;
+  end
+
+  // Wire up the inputs and outputs:
+  // We simulate using 3 kHz instead of 25.175 MHz, otherwise, the simulation slows down too much
+  reg clk, clk_24Hz, clk_timer;
+  reg rst_n;
+  
+  reg left, right, up, down, A, B, X, Y, fish_caught;
+
+  reg is_sleeping, is_playing, is_dead, is_eating, show_bang, deplete_battery, battery_almost_empty;
+  reg is_default_state, play_bang, play_default, play_dead, play_playing, play_sleeping, cat_mirrored;
+  reg [9:0] cat_pos_x, cat_pos_y, fish_pos_x, fish_pos_y;
+  reg [3:0] lives_left;
+  reg [2:0] battery_left;
+  reg [17:0] slow_clocks;
+  reg audio_out; // the period (instead of frequency) of the currently played note.
+
+  wire timing_option; // 0: slow timing, 1: fast timing.
+  
+  clock_divider #(.DIVIDER_MSB(17)) clock_divider(.rst_n(rst_n),
+                                                  .clk(clk),
+                                                  .slow_clocks(slow_clocks));
+
+  assign clk_24Hz = slow_clocks[7];
+  assign clk_timer = timing_option ? slow_clocks[13] : slow_clocks[17];
+  
+  settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
+                                                                             .clk(clk),
+                                                                             .inputs(A),
+                                                                             .settings(timing_option));
+
+  timer timer(.rst_n(rst_n),
+              .clk(clk_24Hz),
+              .slow_clk(clk_timer),
+              .is_sleeping(is_sleeping),
+              .is_playing(is_playing),
+              .caught_fish(fish_caught),
+              .deplete_battery(deplete_battery));
+
+  // Replace tt_um_example with your module name:
+  main_controller main_controller (
+      .rst_n(rst_n),
+      .clk(clk_24Hz),
+      .left(left),
+      .right(right),
+      .up(up),
+      .down(down),
+      .A(A),
+      .B(B),
+      .X(X),
+      .Y(Y),
+      .is_sleeping(is_sleeping),
+      .fish_caught(fish_caught),
+      .is_playing(is_playing),
+      .is_dead(is_dead),
+      .is_eating(is_eating),
+      .is_default_state(is_default_state),
+      .show_bang(show_bang),
+      .play_bang(play_bang),
+      .play_default(play_default),
+      .play_dead(play_dead),
+      .play_playing(play_playing),
+      .play_sleeping(play_sleeping),
+      .deplete_battery(deplete_battery),
+      .battery_almost_empty(battery_almost_empty),
+      .cat_pos_x(cat_pos_x),
+      .cat_pos_y(cat_pos_y),
+      .cat_mirrored(cat_mirrored),
+      .lives_left(lives_left),
+      .battery_left(battery_left)
+  );
+
+  minigame minigame (
+      .rst_n(rst_n),
+      .clk(clk_24Hz),
+      .clk2(clk),
+      .is_eating(is_eating),
+      .cat_pos_x(cat_pos_x),
+      .cat_pos_y(cat_pos_y),
+      .fish_pos_x(fish_pos_x),
+      .fish_pos_y(fish_pos_y),
+      .fish_caught(fish_caught)
+  );
+
+  audio audio (
+    .clk(clk),
+    .rst_n(rst_n),
+    .fish_caught(fish_caught),
+    .play_bang(play_bang),
+    .play_default(play_default),
+    .play_sleeping(play_sleeping),
+    .play_dead(play_dead),
+    .battery_almost_empty(battery_almost_empty),
+    .audio_out(audio_out)
   );
 
 endmodule

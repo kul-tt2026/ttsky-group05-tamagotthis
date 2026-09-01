@@ -60,7 +60,7 @@ async def counter_values_test(dut):
     await setup_test(dut)
 
     dut._log.info("Checking the 2 bit clock divider values (including looparound).")
-    for i in range(1, 100):
+    for i in range(0, 100):
         for j in range(3):
             assert dut.output_2_bits.value[j] == (i >> j) & 1
         await ClockCycles(dut.clk, 1)
@@ -69,7 +69,7 @@ async def counter_values_test(dut):
     await reset(dut)
 
     dut._log.info("Checking the 4 bit clock divider values (including looparound).")
-    for i in range(1, 100):
+    for i in range(0, 100):
         for j in range(5):
             assert dut.output_4_bits.value[j] == (i >> j) & 1
         await ClockCycles(dut.clk, 1)

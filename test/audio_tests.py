@@ -4,3 +4,9 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
+
+
+@cocotb.test()
+async def test_to_avoid_errors(dut):
+    # This test does nothing, but simply makes cocotb not crash.
+    pass
