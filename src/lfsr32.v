@@ -18,14 +18,12 @@ module lfsr32 #(
 ( 
     input [31:0] seed,                  // Determines the first output
     input clk, rst_n,                   // Global clock and active low reset
-    output reg [NB_OUT-1:0] s1,          // Outputted s1 value
+    output reg [NB_OUT-1:0] s1,         // Outputted s1 value
     output reg [NB_OUT-1:0] s2          // Outputted s2 value (set to all zero's if only one output is needed)
 );
   
     reg [31:0] bits;
     wire new_bit;
-    
-    // assign new_bit = bits[31] ^ bits[29] ^ bits[25] ^ bits[24];
 
     always@(posedge clk or negedge rst_n) begin
         if (!rst_n) begin 
@@ -43,21 +41,7 @@ module lfsr32 #(
                 s1 <= bits[NB_OUT-1:0];
                 s2 <= 0;
             end
-
-
         end 
     end 
 
-    
-
 endmodule
-
-
-/* Note: if a 32 stage LFSR is used, it cycles throught 2^32 possible values.
- * When using a clock of 25 MHz (~ 2^24.6 cycles/s), it takes approximately 170 s to cycle through all the values.
- * Using a slower clock would further increase the time it takes to get through one cycle.
- 
- * A lower number of internal bits could be used to decrease the number of registers, but this would also decrease
- * the time it takes to get through one cycle.
- * Changing the number of internal bits requires a different calculation of new_bit as well.
- */

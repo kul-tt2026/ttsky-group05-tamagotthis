@@ -1,14 +1,5 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# Dry-run information:
-
-This section contains important information for the tiny tapeout team supervising this dry-run.
-
-- The tests in the 'test' subfolder are distributed across the different python files, in order to run them, have a look at the README.md file in the same folder.
-- A simulator is also present, that allows to simulate the current design in realtime, this does not yet include VGA or audio feedback.
-- The tests we wrote are not ran in the CI workflow, as we had some trouble with the workflow sometimes succeeding in finding the files, and sometimes failing to do so. We have not resolved this issue and instead suggest manually running the tests.
-- Some tests are commented out, either because the pinout of the module changed and we had no time to change the appropriate testbench yet, or because the timing of an output pulse changed by one clock-cycle, while this has no effect on functional behavior (a tamagotchi is not strictly timing-bound), this does break some tests, and we have not yet had the time to fix it.
-
 # Tiny Tapeout Verilog Project Template
 
 - [Read the documentation for project](docs/info.md)

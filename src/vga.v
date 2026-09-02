@@ -1,11 +1,7 @@
 /*
 * The VGA module handles what is shown on the VGA screen.
-* Note: since different states require different outputs on the screen, it's probably best to create state specific modules and use them in this high-level module.
-* Note: use hvsync_generator.v for the timing.
+* Depending on the state, a different image is shown.
 */
-
-// gebaseerd op vga playground (https://vga-playground.com/?preset=logo) en nyan cat repo (https://github.com/a1k0n/tt08-nyan/blob/main/src/tt_um_a1k0n_nyancat.v)
-// it's not such a mess anymore but now it doesn't work...
 
 `default_nettype none
 
@@ -46,8 +42,7 @@ module vga (
 
     wire [1:0] heart_pixel_value;                                           // Color palette index for the current pixel.
     wire [5:0] heart_color;                                                 // Resulting color for the current pixel.
-    // reg [3:0] hearts_on_screen;                                          // for testing
-    localparam MAX_HEARTS = 9;                                              // maximum number of hearts
+    localparam MAX_HEARTS = 9;                                              // Maximum number of hearts
 
     rom_hart heart_rom (
         .addr({2'b0, heart_addr}),
@@ -98,9 +93,8 @@ module vga (
         heart_pixels = 1'b0;
         heart_x = 10'd0;
         if (pix_y >= HEART_TOP && pix_y < HEART_TOP + HEART_HEIGHT) begin
-            for (heart_index = 0; heart_index < MAX_HEARTS; heart_index = heart_index + 1) begin                        // heart_index < lives_left not ok cause lives_left is not constant
+            for (heart_index = 0; heart_index < MAX_HEARTS; heart_index = heart_index + 1) begin
                 if (heart_index < lives_left && pix_x >= heart_left(heart_index) && pix_x < heart_left(heart_index) + HEART_WIDTH) begin
-                // if (heart_index < hearts_on_screen && pix_x >= heart_left(heart_index) && pix_x < heart_left(heart_index) + HEART_WIDTH) begin       // for testing
                     heart_pixels = 1'b1;
                     heart_x = pix_x - heart_left(heart_index);
                 end
@@ -127,7 +121,6 @@ module vga (
     localparam BATTERY_TOP = 10'd5;
     localparam BATTERY_LEFT = 10'd603;
 
-    // reg [2:0] battery_level;                                              // for testing
     wire [2:0] batt_pixel_value;
     wire [5:0] batt_color;
 
@@ -142,12 +135,6 @@ module vga (
         .rrggbb(batt_color)
     );
 
-    //     palette_battery batt_palette (                                   // for testing
-    //     .battery_level(battery_level),
-    //     .color_index(batt_pixel_value),
-    //     .rrggbb(batt_color)
-    // );
-
     wire [9:0] batt_x = pix_x - BATTERY_LEFT;                                          
     wire [9:0] batt_y = pix_y - BATTERY_TOP;
     wire batt_pixels = (batt_x < (BATTERY_WIDTH) && batt_y < (BATTERY_HEIGHT));
@@ -159,7 +146,6 @@ module vga (
     // ------------------------------------------------ Star logic ------------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------------------------------
 
-    // putting a few stars
     localparam MEM_STAR_WIDTH = 5;                                         // Width of the star in star.hex
     localparam MEM_STAR_HEIGHT = 5;                                        // Height of the star in star.hex
 
@@ -169,94 +155,59 @@ module vga (
     localparam STAR_WIDTH = MEM_STAR_WIDTH * STAR_STRETCH_FACTOR;
     localparam STAR_HEIGHT = MEM_STAR_HEIGHT * STAR_STRETCH_FACTOR;
 
-    localparam STAR_COUNT = 6;
-
-    reg [9:0] star_pos_x [0:STAR_COUNT-1];
-    reg [9:0] star_pos_y [0:STAR_COUNT-1];
-    wire [31:0] star_rand [0:STAR_COUNT-1];
-
-    genvar star_idx;
-    generate
-        for (star_idx = 0; star_idx < STAR_COUNT; star_idx = star_idx + 1) begin : gen_star_rngs
-            lfsr32 #(32,0) star_rng_inst (
-                .seed(32'h1000_1001 + star_idx),
-                .clk(clk),
-                .rst_n(rst_n),
-                .s1(star_rand[star_idx])
-            );
-        end
-    endgenerate
-
-    wire [9:0] star_x_array [0:STAR_COUNT-1];
-    wire [9:0] star_y_array [0:STAR_COUNT-1];
-    wire [9:0] star_addr_array [0:STAR_COUNT-1];
-    wire [1:0] star_pixel_value_array [0:STAR_COUNT-1];
-    wire [STAR_COUNT-1:0] star_valid_array;
-    reg [1:0] star_pixel_value;
-    reg star_pixels;
-    integer star_i;
-
-    always @(posedge clk) begin
-        if (~rst_n) begin
-            for (star_i = 0; star_i < STAR_COUNT; star_i = star_i + 1) begin
-                star_pos_x[star_i] <= 10'd0;
-                star_pos_y[star_i] <= 10'd0;
-            end
-        end else if (sleep_timer == 0) begin
-            for (star_i = 0; star_i < STAR_COUNT; star_i = star_i + 1) begin
-                reg [10:0] x_candidate;
-                reg [9:0] y_candidate;
-
-                x_candidate = ({1'b0, star_rand[star_i][8:0]} + {1'b0, star_rand[star_i][6:0]});
-                if (x_candidate > 11'd625) begin
-                    x_candidate = 11'd625;
-                end
-
-                y_candidate = {3'b0, star_rand[star_i][15:9]};
-                if (y_candidate > 10'd420) begin
-                    y_candidate = 10'd420;
-                end
-
-                star_pos_x[star_i] <= x_candidate[9:0];
-                star_pos_y[star_i] <= y_candidate;
-            end
-        end
-    end
-
-    generate
-        for (star_idx = 0; star_idx < STAR_COUNT; star_idx = star_idx + 1) begin : gen_star_pixels
-            assign star_x_array[star_idx] = pix_x - star_pos_x[star_idx];
-            assign star_y_array[star_idx] = pix_y - star_pos_y[star_idx];
-            assign star_valid_array[star_idx] = (star_x_array[star_idx] < STAR_WIDTH)
-                                            & (star_y_array[star_idx] < STAR_HEIGHT);
-            assign star_addr_array[star_idx] = (star_y_array[star_idx] >> STAR_STRETCH_EXP) * MEM_STAR_WIDTH
-                                            + (star_x_array[star_idx] >> STAR_STRETCH_EXP);
-
-            rom_star star_rom_inst(
-                .addr(star_addr_array[star_idx]),
-                .value(star_pixel_value_array[star_idx])
-            );
-        end
-    endgenerate
-
-    always @(*) begin
-        star_pixels = 1'b0;
-        star_pixel_value = 2'b0;
-        for (star_i = 0; star_i < STAR_COUNT; star_i = star_i + 1) begin
-            if (star_valid_array[star_i]) begin
-                star_pixels = 1'b1;
-                star_pixel_value = star_pixel_value_array[star_i];
-            end
-        end
-    end
-
+    wire [1:0] star_pixel_value;
     wire [5:0] star_color;
+
+    localparam [9:0] star1_pos_x = 10'd80;
+    localparam [9:0] star1_pos_y = 10'd80;
+
+    localparam [9:0] star2_pos_x = 10'd200;
+    localparam [9:0] star2_pos_y = 10'd30;
+
+    localparam [9:0] star3_pos_x = 10'd280;
+    localparam [9:0] star3_pos_y = 10'd100;
+
+    localparam [9:0] star4_pos_x = 10'd400;
+    localparam [9:0] star4_pos_y = 10'd50;
+
+    localparam [9:0] star5_pos_x = 10'd520;
+    localparam [9:0] star5_pos_y = 10'd70;
+
+    rom_star star_rom(
+        .addr(star_addr),
+        .value(star_pixel_value)
+    );
 
     palette_star star_palette(
         .color_index(star_pixel_value),
         .background_color(BACKGROUND_COLOR),
         .rrggbb(star_color)
     );
+    
+    wire star1_pixels = pix_x >= star1_pos_x && pix_x < star1_pos_x + STAR_WIDTH
+                     && pix_y >= star1_pos_y && pix_y < star1_pos_y + STAR_HEIGHT;
+    wire star2_pixels = pix_x >= star2_pos_x && pix_x < star2_pos_x + STAR_WIDTH
+                     && pix_y >= star2_pos_y && pix_y < star2_pos_y + STAR_HEIGHT;
+    wire star3_pixels = pix_x >= star3_pos_x && pix_x < star3_pos_x + STAR_WIDTH
+                     && pix_y >= star3_pos_y && pix_y < star3_pos_y + STAR_HEIGHT;
+    wire star4_pixels = pix_x >= star4_pos_x && pix_x < star4_pos_x + STAR_WIDTH
+                     && pix_y >= star4_pos_y && pix_y < star4_pos_y + STAR_HEIGHT;
+    wire star5_pixels = pix_x >= star5_pos_x && pix_x < star5_pos_x + STAR_WIDTH
+                     && pix_y >= star5_pos_y && pix_y < star5_pos_y + STAR_HEIGHT;
+    wire star_pixels = (star1_pixels | star2_pixels | star3_pixels | star4_pixels | star5_pixels); 
+
+    wire [9:0] star_pos_x = star1_pixels ? star1_pos_x :
+                             star2_pixels ? star2_pos_x :
+                             star3_pixels ? star3_pos_x :
+                             star4_pixels ? star4_pos_x : star5_pos_x;
+    wire [9:0] star_pos_y = star1_pixels ? star1_pos_y :
+                             star2_pixels ? star2_pos_y :
+                             star3_pixels ? star3_pos_y :
+                             star4_pixels ? star4_pos_y : star5_pos_y;
+    wire [9:0] star_x = pix_x - star_pos_x;
+    wire [9:0] star_y = pix_y - star_pos_y;
+
+    wire [9:0] star_addr = (star_y >> STAR_STRETCH_EXP) * MEM_STAR_WIDTH + (star_x >> STAR_STRETCH_EXP);
 
 
     // ------------------------------------------------------------------------------------------------------------------------------
@@ -271,8 +222,6 @@ module vga (
 
     localparam FISH_WIDTH = MEM_FISH_WIDTH * FISH_STRETCH_FACTOR;                           
     localparam FISH_HEIGHT = MEM_FISH_HEIGHT * FISH_STRETCH_FACTOR;
-
-    // fish position determined by input
     
     wire [1:0] fish_pixel_value;
     wire [5:0] fish_color;
@@ -339,7 +288,6 @@ module vga (
         // should be fine for stretch factor <= 2, for higher stretch factors, change x[9:6] to x[9:7] etc... (ook bij addr berekening hieronder)
 
     // addr = (y / stretch_factor) * MEM_CAT_WIDTH + (x / strech_factor) 
-    // delen door strech factor (2^CAT_STRETCH_EXP) door te shiften naar rechts met CAT_STRETCH_EXP
     wire [9:0] cat_addr = (cat_y >> CAT_STRETCH_EXP) * MEM_CAT_WIDTH + ((cat_mirrored ? CAT_WIDTH - 1 - cat_x :  cat_x) >> CAT_STRETCH_EXP); 
 
     // ------------------------------------------------- Changeable eyes ------------------------------------------------------------
@@ -552,12 +500,8 @@ module vga (
             R <= BACKGROUND_COLOR[5:4];
             G <= BACKGROUND_COLOR[3:2];
             B <= BACKGROUND_COLOR[1:0];
+
             if (video_active) begin
-                // if (1) begin
-                //   R <= random[5:4];
-                //   G <= random[3:2];
-                //   B <= random[1:0];
-                // end else
                 // The order of the if statements defines the rendering order.
                 // By checking if an appropriate color is not the background color, we do not get rectangles in the background color cutting through items in lower rendering layers.
                 if (show_bang) begin

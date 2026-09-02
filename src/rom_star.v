@@ -1,8 +1,8 @@
 // Read Only Memory for star
 module rom_star(
-                    input [9:0] addr,                         // Address to read out of, row-major.
-                    output [1:0] value        // Value associated with the specified address.
-                    );
+    input [9:0] addr,                           // Address to read out of, row-major.
+    output [1:0] value                          // Value associated with the specified address.
+);
     reg [1:0] mem[24:0];
     initial begin
         mem[0]  = 2'd0;

@@ -21,5 +21,5 @@ module palette_playing (
         (color_index == 12) ? 6'b111001 :    // light orange
         (color_index == 13) ? 6'b011110 :    // turquoise
         (color_index == 14) ? 6'b101101 :    // another green
-        6'b101010;                              // gray
+        6'b101010;                           // gray
 endmodule
