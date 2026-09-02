@@ -68,16 +68,32 @@ module tt_um_tamagotchi (
       .select(gamepad_select)
   );
 
+  // Slow processes: everything is clocked by clk. The slower rates are clock enables ("ticks", one clk
+  // cycle wide) derived from vsync, so the whole chip is a single clock domain for timing analysis.
+  // (Clocking flops from divider outputs left 120 registers untimed by STA.)
   wire timing_option; // 0: slow timing, 1: fast timing.
-  wire [35:0] slow_clocks;
-  wire clk_main_controller, clk_timer;
-  
+  wire [35:0] slow_clocks;              // counts frames (vsync pulses, 60 Hz): bit k toggles every 2^k frames.
+  wire tick_main_controller, clk_timer;
+
+  reg vsync_d, slow_clock_1_d;
+  always @(posedge clk or negedge rst_n) begin
+    if (~rst_n) begin
+      vsync_d <= 1'b1;        // vsync is active low and idles high: no spurious frame at reset release.
+      slow_clock_1_d <= 1'b0;
+    end else begin
+      vsync_d <= vsync;
+      slow_clock_1_d <= slow_clocks[1];
+    end
+  end
+  wire vsync_rise = vsync & ~vsync_d;                                           // one clk pulse per frame.
+
   clock_divider #(.DIVIDER_MSB(35)) clock_divider(.rst_n(rst_n),
-                                                  .clk(vsync),
+                                                  .clk(clk),
+                                                  .tick(vsync_rise),
                                                   .slow_clocks(slow_clocks));
 
-  assign clk_main_controller = slow_clocks[1];  // +- 15Hz.
-  assign clk_timer = timing_option ? slow_clocks[7] : slow_clocks[7 + 6]; // 4 minutes in slow mode, 4 seconds in fast mode. 
+  assign tick_main_controller = slow_clocks[1] & ~slow_clock_1_d;              // one clk pulse every 4 frames (+- 15Hz).
+  assign clk_timer = timing_option ? slow_clocks[7] : slow_clocks[7 + 6]; // level, sampled on tick_main_controller: 4 minutes in slow mode, 4 seconds in fast mode. 
   
   settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
                                                                              .clk(clk),
@@ -86,7 +102,8 @@ module tt_um_tamagotchi (
                                                                              .settings(timing_option));
 
   timer timer(.rst_n(rst_n),
-              .clk(clk_main_controller),
+              .clk(clk),
+              .tick(tick_main_controller),
               .slow_clk(clk_timer),
               .is_sleeping(is_sleeping),
               .is_playing(is_playing),
@@ -95,7 +112,8 @@ module tt_um_tamagotchi (
  
   main_controller main_controller(
       .rst_n(rst_n),
-      .clk(clk_main_controller),
+      .clk(clk),
+      .tick(tick_main_controller),
       .slow_clk(clk_timer),
       .left(gamepad_left),
       .right(gamepad_right),
@@ -128,7 +146,8 @@ module tt_um_tamagotchi (
 
   minigame minigame (
       .rst_n(rst_n),
-      .clk(clk_main_controller),
+      .clk(clk),
+      .tick(tick_main_controller),
       .clk2(clk),
       .is_eating(is_eating),
       .cat_pos_x(cat_pos_x),
@@ -140,7 +159,7 @@ module tt_um_tamagotchi (
 
   vga vga(
     .clk(clk),
-    .slow_clk(clk_main_controller),
+    .tick(tick_main_controller),
     .rst_n(rst_n),
     .cat_pos_x(cat_pos_x),
     .cat_pos_y(cat_pos_y),

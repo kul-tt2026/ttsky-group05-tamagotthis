@@ -14,8 +14,7 @@ async def test_reset(dut):
     clock = Clock(dut.clk, 10, unit="us")
     cocotb.start_soon(clock.start())
 
-    # Set seed value
-    dut.seed.value = (1 << 31) | 1
+    # Seed is the SEED parameter of the DUT: (1 << 31) | 1
 
     # Reset
     await RisingEdge(dut.clk) 
@@ -37,8 +36,7 @@ async def test_one_cyle(dut):
     # Set the clock period to 10 us (100 KHz)
     clock = Clock(dut.clk, 10, unit="us")
     cocotb.start_soon(clock.start())
-    # Set seed value
-    dut.seed.value = (1 << 31) | 1
+    # Seed is the SEED parameter of the DUT: (1 << 31) | 1
 
     # Reset
     await RisingEdge(dut.clk)
@@ -73,8 +71,7 @@ async def test_multiple_cyles(dut):
     # Set the clock period to 10 us (100 KHz)
     clock = Clock(dut.clk, 10, unit="us")
     cocotb.start_soon(clock.start())
-    # Set seed value
-    dut.seed.value = (1 << 31) | 1
+    # Seed is the SEED parameter of the DUT: (1 << 31) | 1
 
     # Reset
     await RisingEdge(dut.clk)
@@ -117,8 +114,7 @@ async def test_different_seed(dut):
     # Set the clock period to 10 us (100 KHz)
     clock = Clock(dut.clk, 10, unit="us")
     cocotb.start_soon(clock.start())
-    # Set seed value
-    dut.seed.value = 1 << 31 | 46841250 # randomly chosen -- gives 10000010110010101011110110100010
+    # Seed is the SEED parameter of lfsr_dut_alt: 1 << 31 | 46841250 -- gives 10000010110010101011110110100010
 
     # Reset
     await RisingEdge(dut.clk)
@@ -129,22 +125,22 @@ async def test_different_seed(dut):
     await ClockCycles(dut.clk,1)
     await FallingEdge(dut.clk) # sample on falling edge 
     dut._log.info("Initial values")
-    dut._log.info(f"x1 (binary) : {str(dut.s1.value)}") 
-    dut._log.info(f"y1 (binary) : {str(dut.s2.value)}") 
-    x1 = dut.s1.value.to_unsigned()
-    y1 = dut.s2.value.to_unsigned()
+    dut._log.info(f"x1 (binary) : {str(dut.s1_alt.value)}") 
+    dut._log.info(f"y1 (binary) : {str(dut.s2_alt.value)}") 
+    x1 = dut.s1_alt.value.to_unsigned()
+    y1 = dut.s2_alt.value.to_unsigned()
 
-    assert dut.s1.value == 0b0110100010
-    assert dut.s2.value == 0b1000001011
+    assert dut.s1_alt.value == 0b0110100010
+    assert dut.s2_alt.value == 0b1000001011
     
     await RisingEdge(dut.clk)
     await ClockCycles(dut.clk, 1)
 
     dut._log.info("Values after 1 clock cycle")
-    dut._log.info(f"x2 (binary) : {str(dut.s1.value)}") # 0000000000
-    dut._log.info(f"y2 (binary) : {str(dut.s2.value)}") # 1100000000
-    x2 = dut.s1.value.to_unsigned()
-    y2 = dut.s2.value.to_unsigned()
+    dut._log.info(f"x2 (binary) : {str(dut.s1_alt.value)}") # 0000000000
+    dut._log.info(f"y2 (binary) : {str(dut.s2_alt.value)}") # 1100000000
+    x2 = dut.s1_alt.value.to_unsigned()
+    y2 = dut.s2_alt.value.to_unsigned()
 
     assert x1 != x2
     assert y1 != y2

@@ -11,7 +11,8 @@
  * Note: the timers could either count up or down, maybe counting down is easier as then each timer has the same 'has depleted' check: timer == 0
  */
 module timer (
-    input rst_n, clk, slow_clk,                                     // Global active-low reset and clocks.
+    input rst_n, clk, slow_clk,                                     // Global active-low reset, clock and slow (level) signal.
+    input tick,                                                     // Clock enable: the timer only acts on clk edges where tick is high (+-15 Hz tick from project.v).
     input is_sleeping, caught_fish, is_playing,                     // Signals to reset/increase the timers/battery.
     output deplete_battery                                          // Signals that the battery has to drop one level.
 );
@@ -40,7 +41,7 @@ module timer (
             eat_clk <= EAT_DEPLETION_TIME;
             play_clk <= PLAY_DEPLETION_TIME;
         end
-        else begin // posedge clk.
+        else if (tick) begin // posedge clk, enabled by tick.
             sleep_clk <= is_sleeping                ? SLEEP_DEPLETION_TIME :
                          slow_clk && ~last_slow_clk ? (
                                                         sleep_clk == 0 ? SLEEP_FURTHER_DEPLETION_TIME :
@@ -60,8 +61,10 @@ module timer (
     end
 
     always @(posedge clk) begin
-        last_slow_clk <= slow_clk;
-        first_clk_signal = slow_clk && ~last_slow_clk;
+        if (tick) begin
+            last_slow_clk <= slow_clk;
+            first_clk_signal = slow_clk && ~last_slow_clk;
+        end
     end
 
     assign deplete_battery = (sleep_clk == 0 || eat_clk == 0 || play_clk == 0) && first_clk_signal;

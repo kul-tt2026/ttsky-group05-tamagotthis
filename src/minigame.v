@@ -13,13 +13,14 @@ module minigame #(
     parameter DEFAULT_Y = 300,          // Default y position of the fish
     parameter BUFFER_DISTANCE = 50      // Determines how the fish's next position has to be from the current position
 )(
-    input rst_n, clk, clk2,         // Global active-low reset and clock  + faster clock for lfsr (clk2)
+    input rst_n, clk, clk2,         // Global active-low reset and clock  + clock for the lfsr (clk2, same clock in the design)
+    input tick,                         // Clock enable for the fish position: only updated on clk edges where tick is high (+-15 Hz tick from project.v)
     input is_eating,                    // Signals that the food minigame is currently active.
-    input reg [9:0] cat_pos_x,          // The x-position of the cat.
-    input reg [9:0] cat_pos_y,          // The y-position of the cat.
+    input [9:0] cat_pos_x,              // The x-position of the cat.
+    input [9:0] cat_pos_y,              // The y-position of the cat.
     output reg [9:0] fish_pos_x,        // The x-position of the fish.
     output reg [9:0] fish_pos_y,        // The y-position of the fish.
-    output reg fish_caught              // Signals that a fish has been caught.
+    output fish_caught                  // Signals that a fish has been caught (combinational).
 );
 
 // note: changing fish_caught from a wire to a reg causes a clockcycle of delay (cat catches fish in cycle x, fish_caught is high in cycle x+1)
@@ -41,12 +42,12 @@ wire valid_x, valid_y;                                                          
 // wire fish_caught_now;                                                                   // signals whether a fish was caught this clockcycle
 
 // lfsr is a helper module to get pseudorandom x and y coordinates
-wire [31:0] seed = 32'h8000_0001;                                                       // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
+localparam [31:0] SEED = 32'h8000_0001;                                                 // the starting seed of the lfsr, doesn't really matter, as long as it's not all zeros
 
 // x: 0 --> MAX_X_FISH (bv. 640 - 32 - 1 = 607) --> neem 10 bits
 wire [8:0] x1, x2_full;
 wire [6:0] x2 = x2_full[6:0];
-lfsr32 #(9,1) random_x(.seed(seed), .clk(clk2), .rst_n(rst_n), .s1(x1), .s2(x2_full));
+lfsr32 #(9,1,SEED) random_x(.clk(clk2), .rst_n(rst_n), .s1(x1), .s2(x2_full));
 assign x = {1'b0, x1} + {3'b0, x2} >= MAX_X_FISH ? MAX_X_FISH : {1'b0, x1} + {3'b0, x2}; 
 // also need to check lower bound if min_x_fish != 0
 
@@ -56,7 +57,7 @@ wire [7:0] y1 = y14_full[12:5];
 wire [6:0] y2 = y23_full[12:6];
 wire [5:0] y3 = y23_full[5:0];
 wire [4:0] y4 = y14_full[4:0];
-lfsr32 #(13,1) random_y(.seed(seed), .clk(clk2), .rst_n(rst_n), .s1(y14_full), .s2(y23_full));
+lfsr32 #(13,1,SEED) random_y(.clk(clk2), .rst_n(rst_n), .s1(y14_full), .s2(y23_full));
 assign y = {2'b0, y1} + {3'b0, y2} + {4'b0, y3} + {5'b0, y4} >= MAX_Y_FISH ? MAX_Y_FISH : {2'b0, y1} + {3'b0, y2} + {4'b0, y3} + {5'b0, y4};
 
 
@@ -85,7 +86,7 @@ always @(posedge clk or negedge rst_n) begin
         // last_valid_y <= DEFAULT_Y;
         // fish_caught <= 0;
         
-    end else begin
+    end else if (tick) begin
         // fish_caught <= fish_caught_now;
         
         if (fish_caught) begin

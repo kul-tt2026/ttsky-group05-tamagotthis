@@ -1,6 +1,6 @@
 /*
- * The clock-divider takes in the 25.175 MHz clock, and outputs clocks at slower tick rates.
- * This way, other modules can run on slower clocks, without each having to keep a large counter.
+ * The clock-divider counts 'tick' pulses (in the design: one per VGA frame, 60 Hz) and outputs slower square waves.
+ * This way, other modules can run on slower rates, without each having to keep a large counter.
  * Please use this clock_divider, it saves us on registers.
  * In order to use a clock, calculate which bit of the output you need:
  *      SLOW_CLOCKS_INDEX = log2(ORIGINAL_FREQUENCY * SLOW_CLOCK_PERIOD) = log2(ORIGINAL_FREQUENCY / SLOW_CLOCK_FREQUENCY)
@@ -9,13 +9,16 @@
  */
 module clock_divider #(parameter integer DIVIDER_MSB = 0)
                       (input rst_n, clk,                                               // Global active-low reset and clock.
+                       input tick,                                                     // Clock enable: the counter advances on clk edges where tick is high.
                        output reg [DIVIDER_MSB:0] slow_clocks
 );
+    // Note: slow_clocks are *not* clocks. Use them as levels (or derive one-cycle ticks from them,
+    // see project.v); clocking flops from them would create untimed clock domains in the ASIC flow.
     always @(posedge clk or negedge rst_n) begin
         if (~rst_n) begin
             slow_clocks <= 0;
         end
-        else begin
+        else if (tick) begin
             slow_clocks <= slow_clocks + 1;
         end
     end

@@ -9,14 +9,16 @@
  * Since s1 and s2 are taken from the same sequence of bits, they aren't completely independent from each other (they're correlated), 
  * but this isn't a problem for our project.
 
- * A seed (start value) has to be provided, the same seed will always produce the same pseudorandom sequence.
+ * A seed (start value) is given through the SEED parameter, the same seed will always produce the same pseudorandom sequence.
  */
 module lfsr32 #(
     parameter NB_OUT = 10,              // Determines the number of bits of outputs s1 (and s2)
-    parameter TWO_OUTPUTS = 1           // Set it to 1 to get two outputs, otherwise only one output is provided
+    parameter TWO_OUTPUTS = 1,          // Set it to 1 to get two outputs, otherwise only one output is provided
+    parameter [31:0] SEED = 32'h8000_0001 // Start value of the internal bits, must not be all zeros.
+                                        // A parameter (not a port): an async reset value must be a constant,
+                                        // otherwise yosys can't map the flops and emits latches.
 ) 
 ( 
-    input [31:0] seed,                  // Determines the first output
     input clk, rst_n,                   // Global clock and active low reset
     output reg [NB_OUT-1:0] s1,          // Outputted s1 value
     output reg [NB_OUT-1:0] s2          // Outputted s2 value (set to all zero's if only one output is needed)
@@ -29,7 +31,7 @@ module lfsr32 #(
 
     always@(posedge clk or negedge rst_n) begin
         if (!rst_n) begin 
-            bits <= seed;
+            bits <= SEED;
             s1 <= 0;
             s2 <= 0;
         end else begin

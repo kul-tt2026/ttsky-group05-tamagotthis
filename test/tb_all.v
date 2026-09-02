@@ -71,6 +71,7 @@ module tb_main_controller ();
   clock_divider #(.DIVIDER_MSB(1)) clock_divider (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b1),
       .slow_clocks(slow_clks)
   );
 
@@ -78,6 +79,7 @@ module tb_main_controller ();
   main_controller main_controller_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b1),
       .slow_clk(slow_clks[1]),
       .left(left),
       .right(right),
@@ -130,6 +132,7 @@ module tb_timer ();
   clock_divider #(.DIVIDER_MSB(1)) clock_divider (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b1),
       .slow_clocks(slow_clks)
   );
 
@@ -137,6 +140,7 @@ module tb_timer ();
   timer timer_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b1),
       .slow_clk(slow_clks[1]),
       .is_sleeping(is_sleeping),
       .caught_fish(caught_fish),
@@ -200,6 +204,7 @@ module tb_vga ();
   vga vga_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b0),          // slow (main_controller-rate) logic frozen, as before (slow_clk used to be left unconnected)
       .cat_pos_x(cat_pos_x),
       .cat_pos_y(cat_pos_y),
       .fish_pos_x(fish_pos_x),
@@ -243,6 +248,7 @@ module tb_minigame ();
   minigame minigame_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b1),
       .clk2(clk2),
       .is_eating(is_eating),
       .cat_pos_x(cat_pos_x),
@@ -275,6 +281,7 @@ module tb_clock_divider ();
   clock_divider #(.DIVIDER_MSB(2)) clock_divider_2_bits_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b1),
       .slow_clocks(output_2_bits)
   );
 
@@ -282,6 +289,7 @@ module tb_clock_divider ();
   clock_divider #(.DIVIDER_MSB(4)) clock_divider_4_bits_dut (
       .rst_n(rst_n),
       .clk(clk),
+      .tick(1'b1),
       .slow_clocks(output_4_bits)
   );
 
@@ -337,15 +345,23 @@ module tb_lfsr32 ();
 
   reg clk;
   reg rst_n;
-  reg [31:0] seed;
-  reg [9:0] s1, s2;
+  wire [9:0] s1, s2;
+  wire [9:0] s1_alt, s2_alt;
 
+  // Default seed (same as used in minigame.v / vga.v)
   lfsr32 lfsr_dut (
     .clk(clk),
     .rst_n(rst_n),
-    .seed(seed),
     .s1(s1),
     .s2(s2)
+  );
+
+  // Alternative seed, exercised by lfsr32_tests.test_different_seed
+  lfsr32 #(.SEED(32'h82CABDA2)) lfsr_dut_alt (
+    .clk(clk),
+    .rst_n(rst_n),
+    .s1(s1_alt),
+    .s2(s2_alt)
   );
 endmodule
 
@@ -360,7 +376,9 @@ module tb_simulator ();
 
   // Wire up the inputs and outputs:
   // We simulate using 3 kHz instead of 25.175 MHz, otherwise, the simulation slows down too much
-  reg clk, clk_24Hz, clk_timer;
+  reg clk;
+  wire clk_timer;       // level
+  wire tick_24Hz;       // one-cycle clock enable
   reg rst_n;
   
   reg left, right, up, down, A, B, X, Y, fish_caught;
@@ -377,9 +395,12 @@ module tb_simulator ();
   
   clock_divider #(.DIVIDER_MSB(17)) clock_divider(.rst_n(rst_n),
                                                   .clk(clk),
+                                                  .tick(1'b1),
                                                   .slow_clocks(slow_clocks));
 
-  assign clk_24Hz = slow_clocks[7];
+  reg slow_clock_7_d;
+  always @(posedge clk) slow_clock_7_d <= slow_clocks[7];
+  assign tick_24Hz = slow_clocks[7] & ~slow_clock_7_d;
   assign clk_timer = timing_option ? slow_clocks[13] : slow_clocks[17];
   
   settings_manager #(.SETTINGS_COUNT(1), .OPTIONS_COUNT(2)) settings_manager(.rst_n(rst_n),
@@ -388,7 +409,8 @@ module tb_simulator ();
                                                                              .settings(timing_option));
 
   timer timer(.rst_n(rst_n),
-              .clk(clk_24Hz),
+              .clk(clk),
+              .tick(tick_24Hz),
               .slow_clk(clk_timer),
               .is_sleeping(is_sleeping),
               .is_playing(is_playing),
@@ -398,7 +420,9 @@ module tb_simulator ();
   // Replace tt_um_example with your module name:
   main_controller main_controller (
       .rst_n(rst_n),
-      .clk(clk_24Hz),
+      .clk(clk),
+      .tick(tick_24Hz),
+      .slow_clk(clk_timer),
       .left(left),
       .right(right),
       .up(up),
@@ -430,7 +454,8 @@ module tb_simulator ();
 
   minigame minigame (
       .rst_n(rst_n),
-      .clk(clk_24Hz),
+      .clk(clk),
+      .tick(tick_24Hz),
       .clk2(clk),
       .is_eating(is_eating),
       .cat_pos_x(cat_pos_x),

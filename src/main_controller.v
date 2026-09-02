@@ -10,7 +10,8 @@
  *  - If a fish is caught, the cat plays or the cat sleeps, the battery increases again.
  */
 module main_controller (
-    input rst_n, clk, slow_clk,                             // Global active-low reset and clock and slower clock to increase battery levels.
+    input rst_n, clk, slow_clk,                             // Global active-low reset and clock and slower (level) signal to increase battery levels.
+    input tick,                                             // Clock enable: the controller only acts on clk edges where tick is high (+-15 Hz tick from project.v).
     input left, right, up, down, A, B, X, Y,                // Inputs from the Controller pmod.
     input deplete_battery,                                  // Signals that the battery has to drop one level.
     input fish_caught,                                      // Signals that a fish has been caught.
@@ -114,7 +115,7 @@ module main_controller (
             // end
             cat_mirrored <= 0;
         end
-        else begin
+        else if (tick) begin
             last_slow_clk <= slow_clk;
             if (set_timer) begin 
                 timer <= timer_in;
@@ -404,11 +405,13 @@ module main_controller (
             reg set_play_step_timer;
             
             always @(posedge clk) begin
-                if (set_play_step_timer) begin 
-                    play_step_timer <= play_step_timer_in;
-                end
-                else begin 
-                    play_step_timer <= play_step_timer - 1;
+                if (tick) begin
+                    if (set_play_step_timer) begin 
+                        play_step_timer <= play_step_timer_in;
+                    end
+                    else begin 
+                        play_step_timer <= play_step_timer - 1;
+                    end
                 end
             end
             always @(*) begin

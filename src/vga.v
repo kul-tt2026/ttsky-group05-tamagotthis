@@ -10,7 +10,7 @@
 `default_nettype none
 
 module vga (
-    input rst_n, clk, slow_clk,                                             // Global active-low reset, clock and a slower clock that updates along with the main_controller.
+    input rst_n, clk, tick,                                                 // Global active-low reset, clock and a clock enable (tick) that pulses along with the main_controller.
     input reg [9:0] cat_pos_x, fish_pos_x,                                  // The x-positions of the cat and fish.
     input reg [9:0] cat_pos_y, fish_pos_y,                                  // The y-positionsof the cat and fish.
     input is_sleeping, is_playing, is_eating, is_dead, show_bang,           // Signals to determine what has to be shown on the VGA.
@@ -30,9 +30,9 @@ module vga (
 
     // lfsr is a helper module to get pseudorandom bits.
     // wire [31:0] seed = 32'h1D54_EEF7;
-    wire [31:0] seed = 32'h8000_0001;
+    localparam [31:0] SEED = 32'h8000_0001;
     wire [31:0] random;
-    lfsr32 #(32,0) random_x(.seed(seed), .clk(clk), .rst_n(rst_n), .s1(random));
+    lfsr32 #(32,0,SEED) random_x(.clk(clk), .rst_n(rst_n), .s1(random));
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ Heart logic -----------------------------------------------------------------
@@ -195,13 +195,11 @@ module vga (
 
     // Simple timer to implement extra behaviour when sleeping.
     reg [5:0] sleep_timer;
-    always @(posedge slow_clk or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (~rst_n) begin
             sleep_timer <= 0;
-        end else if (sleep_timer == 0) begin
-            sleep_timer <= 48;
-        end else begin
-            sleep_timer <= sleep_timer - 1;
+        end else if (tick) begin
+            sleep_timer <= sleep_timer == 0 ? 6'd48 : sleep_timer - 1;
         end
     end
 
@@ -316,11 +314,11 @@ module vga (
     reg [5:0] cat_color;
     reg is_blinking;
     reg [2:0] sleepy_ear_twitch;
-    always @(posedge slow_clk or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (~rst_n) begin
             is_blinking <= 0;
             sleepy_ear_twitch <= 0;
-        end else begin
+        end else if (tick) begin
             is_blinking <= random[4:0] == 0;
             sleepy_ear_twitch <= sleepy_ear_twitch == 0 ? (random[6:0] == 0) * 3'b111 : sleepy_ear_twitch - 1;
         end
@@ -411,11 +409,11 @@ module vga (
     // ------------------------------------------------------------------------------------------------------------------------------
 
     reg [5:0] bang_color;
-    always @(posedge slow_clk or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (~rst_n) begin
             bang_color <= 6'b0; // Just a reset signal.
         end
-        else begin
+        else if (tick) begin
             bang_color <= {random[2], random[3], random[6], random[18], random[10], random[13]};
         end
     end
