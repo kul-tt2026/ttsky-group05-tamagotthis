@@ -7,7 +7,7 @@ ENV PDK_ROOT=/ttsetup/pdk
 ENV PDK=sky130A
 
 # LibreLane version — update to match tt-gds-action/action.yml
-ARG LIBRELANE_TAG=3.0.3
+ARG LIBRELANE_TAG=3.0.5
 
 # Activate the Python venv for all shells and processes
 ENV VIRTUAL_ENV=/ttsetup/venv

@@ -1,2 +1,8 @@
 pytest==8.4.2
 cocotb==2.0.1
+# extra deps of the per-module tests (`make all_tests`); the pixi env (../pixi.toml) is the
+# reference environment, this file is what CI / the devcontainer install.
+numpy<2
+scipy
+pillow
+cocotb-vga @ git+https://github.com/kul-tt2026/cocotb-vga
