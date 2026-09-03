@@ -37,6 +37,7 @@ project:
     - "palette_z.v"
     - "palette_eyes.v"
     - "palette_playing.v"
+    - "palette_star.v"
 
     - "rom_battery.v"
     - "rom_cat_dead_eye.v"
@@ -46,6 +47,7 @@ project:
     - "rom_kat.v"
     - "rom_vis.v"
     - "rom_z.v"
+    - "rom_star.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).

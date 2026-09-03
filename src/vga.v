@@ -1,11 +1,7 @@
 /*
 * The VGA module handles what is shown on the VGA screen.
-* Note: since different states require different outputs on the screen, it's probably best to create state specific modules and use them in this high-level module.
-* Note: use hvsync_generator.v for the timing.
+* Depending on the state, a different image is shown.
 */
-
-// gebaseerd op vga playground (https://vga-playground.com/?preset=logo) en nyan cat repo (https://github.com/a1k0n/tt08-nyan/blob/main/src/tt_um_a1k0n_nyancat.v)
-// it's not such a mess anymore but now it doesn't work...
 
 `default_nettype none
 
@@ -46,8 +42,7 @@ module vga (
 
     wire [1:0] heart_pixel_value;                                           // Color palette index for the current pixel.
     wire [5:0] heart_color;                                                 // Resulting color for the current pixel.
-    // reg [3:0] hearts_on_screen;                                          // for testing
-    localparam MAX_HEARTS = 9;                                              // maximum number of hearts
+    localparam MAX_HEARTS = 9;                                              // Maximum number of hearts
 
     rom_hart heart_rom (
         .addr({2'b0, heart_addr}),
@@ -98,9 +93,8 @@ module vga (
         heart_pixels = 1'b0;
         heart_x = 10'd0;
         if (pix_y >= HEART_TOP && pix_y < HEART_TOP + HEART_HEIGHT) begin
-            for (heart_index = 0; heart_index < MAX_HEARTS; heart_index = heart_index + 1) begin                        // heart_index < lives_left not ok cause lives_left is not constant
+            for (heart_index = 0; heart_index < MAX_HEARTS; heart_index = heart_index + 1) begin
                 if (heart_index < lives_left && pix_x >= heart_left(heart_index) && pix_x < heart_left(heart_index) + HEART_WIDTH) begin
-                // if (heart_index < hearts_on_screen && pix_x >= heart_left(heart_index) && pix_x < heart_left(heart_index) + HEART_WIDTH) begin       // for testing
                     heart_pixels = 1'b1;
                     heart_x = pix_x - heart_left(heart_index);
                 end
@@ -127,7 +121,6 @@ module vga (
     localparam BATTERY_TOP = 10'd5;
     localparam BATTERY_LEFT = 10'd603;
 
-    // reg [2:0] battery_level;                                              // for testing
     wire [2:0] batt_pixel_value;
     wire [5:0] batt_color;
 
@@ -142,17 +135,80 @@ module vga (
         .rrggbb(batt_color)
     );
 
-    //     palette_battery batt_palette (                                   // for testing
-    //     .battery_level(battery_level),
-    //     .color_index(batt_pixel_value),
-    //     .rrggbb(batt_color)
-    // );
-
     wire [9:0] batt_x = pix_x - BATTERY_LEFT;                                          
     wire [9:0] batt_y = pix_y - BATTERY_TOP;
     wire batt_pixels = (batt_x < (BATTERY_WIDTH) && batt_y < (BATTERY_HEIGHT));
 
     wire [7:0] batt_addr = (batt_y >> BATTERY_STRETCH_EXP) * MEM_BATTERY_WIDTH + (batt_x >> BATTERY_STRETCH_EXP);
+
+
+    // ------------------------------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------ Star logic ------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------------------------------
+
+    localparam MEM_STAR_WIDTH = 5;                                         // Width of the star in star.hex
+    localparam MEM_STAR_HEIGHT = 5;                                        // Height of the star in star.hex
+
+    localparam STAR_STRETCH_EXP = 1;                                       // 0 = no stretching (i.e. stretch factor 1), 1 = stretch factor 2, 2 = stretch factor 4
+    localparam STAR_STRETCH_FACTOR = 1 << STAR_STRETCH_EXP;                // Calculate the stretch factor based on the exponent
+
+    localparam STAR_WIDTH = MEM_STAR_WIDTH * STAR_STRETCH_FACTOR;
+    localparam STAR_HEIGHT = MEM_STAR_HEIGHT * STAR_STRETCH_FACTOR;
+
+    wire [1:0] star_pixel_value;
+    wire [5:0] star_color;
+
+    localparam [9:0] star1_pos_x = 10'd80;
+    localparam [9:0] star1_pos_y = 10'd80;
+
+    localparam [9:0] star2_pos_x = 10'd200;
+    localparam [9:0] star2_pos_y = 10'd30;
+
+    localparam [9:0] star3_pos_x = 10'd280;
+    localparam [9:0] star3_pos_y = 10'd100;
+
+    localparam [9:0] star4_pos_x = 10'd400;
+    localparam [9:0] star4_pos_y = 10'd50;
+
+    localparam [9:0] star5_pos_x = 10'd520;
+    localparam [9:0] star5_pos_y = 10'd70;
+
+    rom_star star_rom(
+        .addr(star_addr),
+        .value(star_pixel_value)
+    );
+
+    palette_star star_palette(
+        .color_index(star_pixel_value),
+        .background_color(BACKGROUND_COLOR),
+        .rrggbb(star_color)
+    );
+    
+    wire star1_pixels = pix_x >= star1_pos_x && pix_x < star1_pos_x + STAR_WIDTH
+                     && pix_y >= star1_pos_y && pix_y < star1_pos_y + STAR_HEIGHT;
+    wire star2_pixels = pix_x >= star2_pos_x && pix_x < star2_pos_x + STAR_WIDTH
+                     && pix_y >= star2_pos_y && pix_y < star2_pos_y + STAR_HEIGHT;
+    wire star3_pixels = pix_x >= star3_pos_x && pix_x < star3_pos_x + STAR_WIDTH
+                     && pix_y >= star3_pos_y && pix_y < star3_pos_y + STAR_HEIGHT;
+    wire star4_pixels = pix_x >= star4_pos_x && pix_x < star4_pos_x + STAR_WIDTH
+                     && pix_y >= star4_pos_y && pix_y < star4_pos_y + STAR_HEIGHT;
+    wire star5_pixels = pix_x >= star5_pos_x && pix_x < star5_pos_x + STAR_WIDTH
+                     && pix_y >= star5_pos_y && pix_y < star5_pos_y + STAR_HEIGHT;
+    wire star_pixels = (star1_pixels | star2_pixels | star3_pixels | star4_pixels | star5_pixels); 
+
+    wire [9:0] star_pos_x = star1_pixels ? star1_pos_x :
+                             star2_pixels ? star2_pos_x :
+                             star3_pixels ? star3_pos_x :
+                             star4_pixels ? star4_pos_x : star5_pos_x;
+    wire [9:0] star_pos_y = star1_pixels ? star1_pos_y :
+                             star2_pixels ? star2_pos_y :
+                             star3_pixels ? star3_pos_y :
+                             star4_pixels ? star4_pos_y : star5_pos_y;
+    wire [9:0] star_x = pix_x - star_pos_x;
+    wire [9:0] star_y = pix_y - star_pos_y;
+
+    wire [9:0] star_addr = (star_y >> STAR_STRETCH_EXP) * MEM_STAR_WIDTH + (star_x >> STAR_STRETCH_EXP);
+
 
     // ------------------------------------------------------------------------------------------------------------------------------
     // ------------------------------------------------ Fish logic ------------------------------------------------------------------
@@ -166,8 +222,6 @@ module vga (
 
     localparam FISH_WIDTH = MEM_FISH_WIDTH * FISH_STRETCH_FACTOR;                           
     localparam FISH_HEIGHT = MEM_FISH_HEIGHT * FISH_STRETCH_FACTOR;
-
-    // fish position determined by input
     
     wire [1:0] fish_pixel_value;
     wire [5:0] fish_color;
@@ -232,7 +286,6 @@ module vga (
         // should be fine for stretch factor <= 2, for higher stretch factors, change x[9:6] to x[9:7] etc... (ook bij addr berekening hieronder)
 
     // addr = (y / stretch_factor) * MEM_CAT_WIDTH + (x / strech_factor) 
-    // delen door strech factor (2^CAT_STRETCH_EXP) door te shiften naar rechts met CAT_STRETCH_EXP
     wire [9:0] cat_addr = (cat_y >> CAT_STRETCH_EXP) * MEM_CAT_WIDTH + ((cat_mirrored ? CAT_WIDTH - 1 - cat_x :  cat_x) >> CAT_STRETCH_EXP); 
 
     // ------------------------------------------------- Changeable eyes ------------------------------------------------------------
@@ -455,12 +508,8 @@ module vga (
             R <= BACKGROUND_COLOR[5:4];
             G <= BACKGROUND_COLOR[3:2];
             B <= BACKGROUND_COLOR[1:0];
+
             if (video_active) begin
-                // if (1) begin
-                //   R <= random[5:4];
-                //   G <= random[3:2];
-                //   B <= random[1:0];
-                // end else
                 // The order of the if statements defines the rendering order.
                 // By checking if an appropriate color is not the background color, we do not get rectangles in the background color cutting through items in lower rendering layers.
                 if (show_bang) begin
@@ -487,6 +536,10 @@ module vga (
                     R <= fish_color[5:4];
                     G <= fish_color[3:2];
                     B <= fish_color[1:0];
+                end else if (star_pixels & is_sleeping) begin
+                    R <= star_color[5:4];
+                    G <= star_color[3:2];
+                    B <= star_color[1:0];
                 end
             end
         end
