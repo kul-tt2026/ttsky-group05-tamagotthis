@@ -73,23 +73,16 @@ async def record_audio(
     for _ in range(number_of_samples):
 
         # Wait for one averaged PWM sample.
-        while True:
-
-            await RisingEdge(dut.clk)
-
-            if int(dut.sample_valid.value):
-                break
-
-        # ----------------------------------------------------
-        # Convert 8-bit duty cycle to voltage.
-        #
-        # 0   -> 0.0 V
-        # 255 -> 3.3 V
-        # ----------------------------------------------------
+        
+        # Wait directly for the sample pulse instead of
+        # waking Python on every 25 MHz clock edge.
+        await RisingEdge(dut.sample_valid)
+        await Timer(1, unit="ns")
 
         duty = int(dut.audio_sample.value)
 
-        voltage = 3.3 * duty / 255.0
+
+        voltage = 3.3 * duty / 256.0
 
         # ----------------------------------------------------
         # RC low-pass filter

@@ -43,7 +43,7 @@ module tb_audio;
     reg [8:0] pwm_high_count;
 
     reg       sample_valid;
-    reg [7:0] audio_sample;
+    reg [8:0] audio_sample;
 
     // =========================================================
     // CLOCK
